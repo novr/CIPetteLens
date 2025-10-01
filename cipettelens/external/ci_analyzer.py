@@ -74,8 +74,38 @@ class CIAnalyzerClient:
         pattern = r"^[a-zA-Z0-9][a-zA-Z0-9_.-]*(/[a-zA-Z0-9][a-zA-Z0-9_.-]*)?(:[a-zA-Z0-9_.-]+)?$"
         return bool(re.match(pattern, image_name))
 
+    def _ensure_lastrun_directories(self) -> None:
+        """Ensure required directories exist for lastRunStore."""
+        # Create .ci_analyzer directory if it doesn't exist
+        ci_analyzer_dir = Path(".ci_analyzer")
+        ci_analyzer_dir.mkdir(exist_ok=True)
+
+        # Create last_run directory if it doesn't exist
+        last_run_dir = ci_analyzer_dir / "last_run"
+        last_run_dir.mkdir(exist_ok=True)
+
+        logger.info(
+            f"Ensured lastRunStore directories exist: {last_run_dir.absolute()}"
+        )
+
+    def _verify_lastrun_file(self) -> None:
+        """Verify that last_run file was created by CIAnalyzer."""
+        last_run_file = Path(".ci_analyzer/last_run/github.json")
+        if last_run_file.exists():
+            logger.info(
+                f"Last run file created successfully: {last_run_file.absolute()}"
+            )
+            # Log file size for debugging
+            file_size = last_run_file.stat().st_size
+            logger.info(f"Last run file size: {file_size} bytes")
+        else:
+            logger.warning("Last run file was not created by CIAnalyzer")
+
     def _run_cianalyzer(self, github_token: str) -> dict[Any, Any]:
         """Run CIAnalyzer via Docker."""
+        # Ensure required directories exist for lastRunStore
+        self._ensure_lastrun_directories()
+
         cmd = [
             "docker",
             "run",
@@ -118,6 +148,10 @@ class CIAnalyzerClient:
             )
 
             logger.info("CIAnalyzer execution completed successfully")
+
+            # Verify last_run file was created
+            self._verify_lastrun_file()
+
             return json.loads(result.stdout)  # type: ignore[no-any-return]
 
         except subprocess.TimeoutExpired as e:

@@ -163,18 +163,22 @@ class TestSQLiteMetricsRepository:
                 return self._data[key]
 
         rows = [
-            MockRow({
-                "repository": "test/repo",
-                "metric_name": "duration_average",
-                "value": 120.5,
-                "timestamp": "2024-01-01T00:00:00"
-            }),
-            MockRow({
-                "repository": "test/repo",
-                "metric_name": "duration_median",
-                "value": 110.0,
-                "timestamp": "2024-01-01T00:00:00"
-            }),
+            MockRow(
+                {
+                    "repository": "test/repo",
+                    "metric_name": "duration_average",
+                    "value": 120.5,
+                    "timestamp": "2024-01-01T00:00:00",
+                }
+            ),
+            MockRow(
+                {
+                    "repository": "test/repo",
+                    "metric_name": "duration_median",
+                    "value": 110.0,
+                    "timestamp": "2024-01-01T00:00:00",
+                }
+            ),
         ]
 
         result = repository._build_repository_metrics_from_rows(rows)

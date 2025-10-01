@@ -78,7 +78,9 @@ def create_app() -> Flask:
         """Get metric history for a specific repository and metric."""
         try:
             limit = request.args.get("limit", 100, type=int)
-            history = metrics_repository.get_metric_history(repository, metric_name, limit)
+            history = metrics_repository.get_metric_history(
+                repository, metric_name, limit
+            )
             return jsonify({"history": history})
         except Exception as e:
             return jsonify({"error": str(e)}), 500

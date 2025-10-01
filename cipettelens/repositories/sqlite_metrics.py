@@ -193,7 +193,9 @@ class SQLiteMetricsRepository(MetricsRepository):
                 return self._build_repository_metrics_from_rows(rows)
 
         except sqlite3.Error as e:
-            raise DatabaseException(f"Failed to get metrics for repository {repository}: {e}") from e
+            raise DatabaseException(
+                f"Failed to get metrics for repository {repository}: {e}"
+            ) from e
 
     def get_all_metrics(self, limit: int = 1000) -> list[RepositoryMetrics]:
         """Get all metrics."""
@@ -244,7 +246,9 @@ class SQLiteMetricsRepository(MetricsRepository):
                 return self._build_repository_metrics_from_rows(rows)
 
         except sqlite3.Error as e:
-            raise DatabaseException(f"Failed to get metrics by name {metric_name}: {e}") from e
+            raise DatabaseException(
+                f"Failed to get metrics by name {metric_name}: {e}"
+            ) from e
 
     def _build_repository_metrics_from_rows(
         self, rows: list[sqlite3.Row]
@@ -267,7 +271,9 @@ class SQLiteMetricsRepository(MetricsRepository):
             if key not in repo_metrics_map:
                 repo_metrics_map[key] = {
                     "repository": repo,
-                    "timestamp": datetime.fromisoformat(timestamp) if timestamp else None,
+                    "timestamp": (
+                        datetime.fromisoformat(timestamp) if timestamp else None
+                    ),
                     "metrics": {},
                 }
 
@@ -320,7 +326,9 @@ class SQLiteMetricsRepository(MetricsRepository):
 
         return result
 
-    def get_latest_metrics_by_repository(self, repository: str) -> RepositoryMetrics | None:
+    def get_latest_metrics_by_repository(
+        self, repository: str
+    ) -> RepositoryMetrics | None:
         """Get the latest metrics for a specific repository."""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -358,7 +366,9 @@ class SQLiteMetricsRepository(MetricsRepository):
                 return metrics_list[0] if metrics_list else None
 
         except sqlite3.Error as e:
-            raise DatabaseException(f"Failed to get latest metrics for repository {repository}: {e}") from e
+            raise DatabaseException(
+                f"Failed to get latest metrics for repository {repository}: {e}"
+            ) from e
 
     def get_metric_history(
         self, repository: str, metric_name: str, limit: int = 100
