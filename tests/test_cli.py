@@ -16,7 +16,9 @@ class TestCollectCLI:
     @patch("cipettelens.cli.collect.MetricsService")
     @patch("cipettelens.cli.collect.CollectMetricsUseCase")
     @patch("cipettelens.cli.collect.logger")
-    def test_collect_metrics_success(self, mock_logger, mock_use_case_class, mock_service_class, mock_repo_class):
+    def test_collect_metrics_success(
+        self, mock_logger, mock_use_case_class, mock_service_class, mock_repo_class
+    ):
         """Test successful metrics collection."""
         # Setup mocks
         mock_repo = MagicMock()
@@ -41,13 +43,17 @@ class TestCollectCLI:
         mock_use_case.execute.assert_called_once()
         mock_logger.info.assert_called()
         mock_logger.info.assert_any_call("Starting CIAnalyzer data collection...")
-        mock_logger.info.assert_any_call("Data collection completed successfully! Collected metrics for 2 repositories")
+        mock_logger.info.assert_any_call(
+            "Data collection completed successfully! Collected metrics for 2 repositories"
+        )
 
     @patch("cipettelens.cli.collect.SQLiteMetricsRepository")
     @patch("cipettelens.cli.collect.MetricsService")
     @patch("cipettelens.cli.collect.CollectMetricsUseCase")
     @patch("cipettelens.cli.collect.logger")
-    def test_collect_metrics_error(self, mock_logger, mock_use_case_class, mock_service_class, mock_repo_class):
+    def test_collect_metrics_error(
+        self, mock_logger, mock_use_case_class, mock_service_class, mock_repo_class
+    ):
         """Test metrics collection with error."""
         # Setup mocks
         mock_repo = MagicMock()

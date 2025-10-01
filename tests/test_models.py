@@ -2,15 +2,14 @@
 Tests for domain models.
 """
 
-import pytest
 from datetime import datetime
 
 from cipettelens.models.ci_metrics import (
-    CIMetrics,
-    RepositoryMetrics,
-    DurationMetrics,
-    ThroughputMetrics,
     BuildMetrics,
+    CIMetrics,
+    DurationMetrics,
+    RepositoryMetrics,
+    ThroughputMetrics,
 )
 
 

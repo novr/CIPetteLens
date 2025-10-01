@@ -142,7 +142,7 @@ class TestSecurityConfig:
         mock_config.GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef12345678"
         mock_config.TARGET_REPOSITORIES = ["owner/repo1", "owner/repo2"]
         mock_config.FLASK_PORT = 5000
-        
+
         errors = SecurityConfig.validate_environment()
         assert errors == {}
 
@@ -154,7 +154,7 @@ class TestSecurityConfig:
         mock_config.GITHUB_TOKEN = None
         mock_config.TARGET_REPOSITORIES = []
         mock_config.FLASK_PORT = 5000
-        
+
         errors = SecurityConfig.validate_environment()
         assert "GITHUB_TOKEN" in errors
         assert "required" in errors["GITHUB_TOKEN"]
@@ -174,7 +174,7 @@ class TestSecurityConfig:
         mock_config.GITHUB_TOKEN = "any_token_format"
         mock_config.TARGET_REPOSITORIES = ["owner/repo1", "owner/repo2"]
         mock_config.FLASK_PORT = 5000
-        
+
         errors = SecurityConfig.validate_environment()
         # Should not have any errors since token validation is disabled
         assert "GITHUB_TOKEN" not in errors
@@ -194,7 +194,7 @@ class TestSecurityConfig:
         mock_config.GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef12345678"
         mock_config.TARGET_REPOSITORIES = ["invalid-repo", "owner/repo2"]
         mock_config.FLASK_PORT = 5000
-        
+
         errors = SecurityConfig.validate_environment()
         assert "TARGET_REPOSITORIES" in errors
         assert "Invalid repository format" in errors["TARGET_REPOSITORIES"]
@@ -214,7 +214,7 @@ class TestSecurityConfig:
         mock_config.GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef12345678"
         mock_config.TARGET_REPOSITORIES = ["owner/repo1", "owner/repo2"]
         mock_config.FLASK_PORT = 99999
-        
+
         errors = SecurityConfig.validate_environment()
         assert "FLASK_PORT" in errors
         assert "Invalid port number" in errors["FLASK_PORT"]
