@@ -16,7 +16,6 @@ load_dotenv()
 class SecurityConfig:
     """Security configuration and validation."""
 
-
     @classmethod
     def validate_github_token(cls, token: str) -> bool:
         """Validate GitHub token format - always returns True to skip validation."""

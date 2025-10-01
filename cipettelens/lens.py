@@ -6,9 +6,9 @@ import json
 import os
 import sqlite3
 import subprocess
-import yaml
 from pathlib import Path
 
+import yaml
 from dotenv import load_dotenv
 
 from .config import Config
@@ -22,34 +22,31 @@ load_dotenv()
 def generate_mock_data():
     """Generate mock CI/CD metrics data for testing."""
     import random
-    from datetime import datetime, timedelta
-    
+    from datetime import datetime
+
     target_repos = Config.TARGET_REPOSITORIES
-    mock_data = {
-        "timestamp": datetime.now().isoformat(),
-        "repositories": {}
-    }
-    
+    mock_data = {"timestamp": datetime.now().isoformat(), "repositories": {}}
+
     for repo in target_repos:
         mock_data["repositories"][repo] = {
             "duration": {
                 "average": round(random.uniform(5.0, 30.0), 2),
                 "median": round(random.uniform(4.0, 25.0), 2),
-                "p95": round(random.uniform(15.0, 45.0), 2)
+                "p95": round(random.uniform(15.0, 45.0), 2),
             },
             "success_rate": round(random.uniform(0.85, 0.98), 3),
             "throughput": {
                 "daily": random.randint(10, 50),
-                "weekly": random.randint(70, 350)
+                "weekly": random.randint(70, 350),
             },
             "mttr": round(random.uniform(2.0, 8.0), 2),
             "builds": {
                 "total": random.randint(100, 500),
                 "successful": random.randint(85, 490),
-                "failed": random.randint(5, 50)
-            }
+                "failed": random.randint(5, 50),
+            },
         }
-    
+
     logger.info("Generated mock CI/CD metrics data")
     return mock_data
 
@@ -60,7 +57,7 @@ def run_cianalyzer():
     if Config.CIAnalyzer_IMAGE == "hello-world" or not Config.CIAnalyzer_IMAGE:
         logger.info("Using mock data for testing")
         return generate_mock_data()
-    
+
     # Validate environment variables
     validation_errors = SecurityConfig.validate_environment()
     if validation_errors:
@@ -86,14 +83,14 @@ def _get_repos_from_config() -> list[str]:
     config_path = Path("ci_analyzer.yaml")
     if not config_path.exists():
         raise FileNotFoundError("ci_analyzer.yaml file not found")
-    
-    with open(config_path, 'r') as f:
+
+    with open(config_path) as f:
         config = yaml.safe_load(f)
-    
+
     repos = []
-    for repo_config in config.get('github', {}).get('repos', []):
-        repos.append(repo_config['name'])
-    
+    for repo_config in config.get("github", {}).get("repos", []):
+        repos.append(repo_config["name"])
+
     return repos
 
 
@@ -102,7 +99,7 @@ def _run_with_stdin_and_config(github_token: str, cianalyzer_image: str) -> dict
     # Check for debug mode
     debug_mode = os.getenv("CI_ANALYZER_DEBUG", "0")
     use_debug = debug_mode.lower() in ("1", "true", "yes", "on")
-    
+
     # Run CIAnalyzer via Docker with token passed via stdin and config file
     cmd = [
         "docker",
@@ -116,24 +113,20 @@ def _run_with_stdin_and_config(github_token: str, cianalyzer_image: str) -> dict
         "-e",
         "GITHUB_TOKEN_FILE=/dev/stdin",
     ]
-    
+
     # Add debug environment variable if enabled
     if use_debug:
         cmd.extend(["-e", "CI_ANALYZER_DEBUG=1"])
-    
+
     cmd.extend([cianalyzer_image, "-c", "ci_analyzer.yaml"])
-    
+
     # Add --debug flag if debug mode is enabled
     if use_debug:
         cmd.append("--debug")
 
     logger.info(f"Executing Docker command: {' '.join(cmd)}")
     result = subprocess.run(
-        cmd, 
-        input=github_token, 
-        capture_output=True, 
-        text=True, 
-        check=True
+        cmd, input=github_token, capture_output=True, text=True, check=True
     )
 
     logger.info("CIAnalyzer execution completed successfully (stdin + config method)")
@@ -159,11 +152,7 @@ def _run_with_stdin(github_token: str, repos: list[str], cianalyzer_image: str) 
 
     logger.log_docker_command(cmd, repos)
     result = subprocess.run(
-        cmd, 
-        input=github_token, 
-        capture_output=True, 
-        text=True, 
-        check=True
+        cmd, input=github_token, capture_output=True, text=True, check=True
     )
 
     logger.info("CIAnalyzer execution completed successfully (stdin method)")
@@ -202,55 +191,55 @@ def save_to_database(data):
                 if "duration" in metrics:
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "duration_average", metrics["duration"]["average"])
+                        (repo, "duration_average", metrics["duration"]["average"]),
                     )
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "duration_median", metrics["duration"]["median"])
+                        (repo, "duration_median", metrics["duration"]["median"]),
                     )
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "duration_p95", metrics["duration"]["p95"])
+                        (repo, "duration_p95", metrics["duration"]["p95"]),
                     )
-                
+
                 # Insert success rate
                 if "success_rate" in metrics:
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "success_rate", metrics["success_rate"])
+                        (repo, "success_rate", metrics["success_rate"]),
                     )
-                
+
                 # Insert throughput metrics
                 if "throughput" in metrics:
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "throughput_daily", metrics["throughput"]["daily"])
+                        (repo, "throughput_daily", metrics["throughput"]["daily"]),
                     )
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "throughput_weekly", metrics["throughput"]["weekly"])
+                        (repo, "throughput_weekly", metrics["throughput"]["weekly"]),
                     )
-                
+
                 # Insert MTTR
                 if "mttr" in metrics:
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "mttr", metrics["mttr"])
+                        (repo, "mttr", metrics["mttr"]),
                     )
-                
+
                 # Insert build metrics
                 if "builds" in metrics:
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "builds_total", metrics["builds"]["total"])
+                        (repo, "builds_total", metrics["builds"]["total"]),
                     )
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "builds_successful", metrics["builds"]["successful"])
+                        (repo, "builds_successful", metrics["builds"]["successful"]),
                     )
                     cursor.execute(
                         "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "builds_failed", metrics["builds"]["failed"])
+                        (repo, "builds_failed", metrics["builds"]["failed"]),
                     )
 
         conn.commit()
