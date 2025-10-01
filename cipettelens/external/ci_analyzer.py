@@ -101,8 +101,43 @@ class CIAnalyzerClient:
         else:
             logger.warning("Last run file was not created by CIAnalyzer")
 
+    def _log_docker_output(self, result: subprocess.CompletedProcess[str]) -> None:
+        """Log Docker command output for debugging."""
+        # Log return code
+        logger.info(f"CIAnalyzer Docker exit code: {result.returncode}")
+
+        # Log stdout if present
+        if result.stdout:
+            stdout_lines = result.stdout.strip().split("\n")
+            logger.info(f"CIAnalyzer Docker stdout ({len(stdout_lines)} lines):")
+            logger.info("=" * 60)
+            for i, line in enumerate(stdout_lines, 1):
+                if line.strip():  # Only log non-empty lines
+                    logger.info(f"[STDOUT {i:3d}] {line}")
+            logger.info("=" * 60)
+
+        # Log stderr if present
+        if result.stderr:
+            stderr_lines = result.stderr.strip().split("\n")
+            logger.warning(f"CIAnalyzer Docker stderr ({len(stderr_lines)} lines):")
+            logger.warning("=" * 60)
+            for i, line in enumerate(stderr_lines, 1):
+                if line.strip():  # Only log non-empty lines
+                    logger.warning(f"[STDERR {i:3d}] {line}")
+            logger.warning("=" * 60)
+
+        # Log execution summary
+        if result.returncode == 0:
+            logger.info("✅ CIAnalyzer Docker execution completed successfully")
+        else:
+            logger.error(
+                f"❌ CIAnalyzer Docker execution failed with exit code {result.returncode}"
+            )
+
     def _run_cianalyzer(self, github_token: str) -> dict[Any, Any]:
         """Run CIAnalyzer via Docker."""
+        import time
+
         # Ensure required directories exist for lastRunStore
         self._ensure_lastrun_directories()
 
@@ -131,11 +166,22 @@ class CIAnalyzerClient:
         if self.debug:
             cmd.append("--debug")
 
-        logger.info(f"Executing CIAnalyzer: {' '.join(cmd)}")
+        logger.info("🚀 Starting CIAnalyzer Docker execution")
+        logger.info(f"⏰ Execution time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"🐳 Docker image: {self.image}")
+        logger.info(f"🔧 Debug mode: {self.debug}")
+        logger.info("⏱️  Timeout: 300 seconds (5 minutes)")
+        logger.info(f"📋 Command: {' '.join(cmd)}")
+        logger.info("-" * 60)
 
         try:
             # Validate command components for security
             self._validate_command(cmd)
+            logger.debug("Command validation passed")
+
+            # Record start time for execution duration
+            start_time = time.time()
+            logger.info("Starting Docker subprocess execution...")
 
             # S603: subprocess call is validated and controlled
             result = subprocess.run(
@@ -147,6 +193,17 @@ class CIAnalyzerClient:
                 timeout=300,  # 5 minute timeout
             )
 
+            logger.info("Docker subprocess execution completed")
+
+            # Calculate execution time
+            execution_time = time.time() - start_time
+            logger.info(
+                f"CIAnalyzer Docker execution completed in {execution_time:.2f} seconds"
+            )
+
+            # Log Docker output for debugging
+            self._log_docker_output(result)
+
             logger.info("CIAnalyzer execution completed successfully")
 
             # Verify last_run file was created
@@ -155,21 +212,35 @@ class CIAnalyzerClient:
             return json.loads(result.stdout)  # type: ignore[no-any-return]
 
         except subprocess.TimeoutExpired as e:
+            # Log timeout information
+            logger.error("CIAnalyzer execution timed out after 5 minutes")
+            if e.stdout:
+                logger.error(f"Timeout stdout: {e.stdout.decode()}")
+            if e.stderr:
+                logger.error(f"Timeout stderr: {e.stderr.decode()}")
             raise CIAnalyzerExecutionError(
                 f"CIAnalyzer execution timed out after 5 minutes: {e}",
                 stderr=e.stderr.decode() if e.stderr else None,
             ) from e
         except subprocess.CalledProcessError as e:
+            # Log error information
+            logger.error(f"CIAnalyzer execution failed with exit code {e.returncode}")
+            if e.stdout:
+                logger.error(f"Error stdout: {e.stdout.decode()}")
+            if e.stderr:
+                logger.error(f"Error stderr: {e.stderr.decode()}")
             raise CIAnalyzerExecutionError(
                 f"CIAnalyzer execution failed with exit code {e.returncode}: {e}",
                 exit_code=e.returncode,
                 stderr=e.stderr.decode() if e.stderr else None,
             ) from e
         except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse CIAnalyzer output as JSON: {e}")
             raise CIAnalyzerExecutionError(
                 f"Failed to parse CIAnalyzer output as JSON: {e}"
             ) from e
         except Exception as e:
+            logger.error(f"Unexpected error during CIAnalyzer execution: {e}")
             raise CIAnalyzerExecutionError(
                 f"Unexpected error during CIAnalyzer execution: {e}"
             ) from e
