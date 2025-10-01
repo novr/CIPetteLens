@@ -77,73 +77,8 @@ def run_cianalyzer():
 
     logger.log_github_token_usage("data collection", repos)
 
-    # Select token passing method based on configuration
-    security_level = Config.TOKEN_SECURITY_LEVEL.lower()
-    
-    if security_level == "auto":
-        # Try multiple secure token passing methods (ordered by security level)
-        token_methods = [
-            _run_with_token_file,      # Most secure: file mount with restricted permissions
-            _run_with_stdin,           # Secure: passed via stdin
-            _run_with_docker_secret,   # Secure: Docker secrets (if available)
-            _run_with_env_var,         # Less secure: environment variable
-        ]
-
-        last_error = None
-        for method in token_methods:
-            try:
-                logger.info(f"Trying token method: {method.__name__}")
-                return method(github_token, repos, cianalyzer_image)
-            except Exception as e:
-                logger.warning(f"Token method {method.__name__} failed: {e}")
-                last_error = e
-                continue
-
-        # If all methods fail, raise the last error
-        raise RuntimeError(f"All token passing methods failed. Last error: {last_error}")
-    
-    elif security_level == "file":
-        return _run_with_token_file(github_token, repos, cianalyzer_image)
-    elif security_level == "stdin":
-        return _run_with_stdin(github_token, repos, cianalyzer_image)
-    elif security_level == "secret":
-        return _run_with_docker_secret(github_token, repos, cianalyzer_image)
-    elif security_level == "env":
-        return _run_with_env_var(github_token, repos, cianalyzer_image)
-    else:
-        raise ValueError(f"Invalid TOKEN_SECURITY_LEVEL: {security_level}. Must be one of: auto, file, stdin, secret, env")
-
-
-def _run_with_token_file(github_token: str, repos: list[str], cianalyzer_image: str) -> dict:
-    """Run CIAnalyzer with token file mount (most secure)."""
-    # Create a secure temporary file for the GitHub token
-    token_file_path = SecurityConfig.create_secure_temp_file(github_token, ".token")
-
-    try:
-        # Run CIAnalyzer via Docker with token file mount
-        cmd = [
-            "docker",
-            "run",
-            "--rm",
-            "-v",
-            f"{token_file_path}:/tmp/github_token:ro",
-            "-e",
-            "GITHUB_TOKEN_FILE=/tmp/github_token",
-            cianalyzer_image,
-            "--repositories",
-            ",".join(repos),
-            "--output",
-            "json",
-        ]
-
-        logger.log_docker_command(cmd, repos)
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-
-        logger.info("CIAnalyzer execution completed successfully (token file method)")
-        return json.loads(result.stdout)
-    finally:
-        # Securely clean up the temporary token file
-        SecurityConfig.secure_cleanup(token_file_path)
+    # Use stdin method for token passing
+    return _run_with_stdin(github_token, repos, cianalyzer_image)
 
 
 def _run_with_stdin(github_token: str, repos: list[str], cianalyzer_image: str) -> dict:
@@ -173,82 +108,6 @@ def _run_with_stdin(github_token: str, repos: list[str], cianalyzer_image: str) 
     )
 
     logger.info("CIAnalyzer execution completed successfully (stdin method)")
-    return json.loads(result.stdout)
-
-
-def _run_with_docker_secret(github_token: str, repos: list[str], cianalyzer_image: str) -> dict:
-    """Run CIAnalyzer with token passed via Docker secrets (secure, requires Docker Swarm)."""
-    # Create a secure temporary file for the GitHub token
-    token_file_path = SecurityConfig.create_secure_temp_file(github_token, ".token")
-
-    try:
-        # Create Docker secret (requires Docker Swarm mode)
-        secret_name = "github_token_secret"
-        
-        # Try to create secret
-        create_secret_cmd = [
-            "docker",
-            "secret",
-            "create",
-            secret_name,
-            token_file_path,
-        ]
-        
-        # Check if Docker Swarm is available
-        result = subprocess.run(create_secret_cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            raise RuntimeError(f"Docker Swarm not available or secret creation failed: {result.stderr}")
-
-        # Run CIAnalyzer with Docker secret
-        cmd = [
-            "docker",
-            "run",
-            "--rm",
-            "--secret",
-            f"source={secret_name},target=/run/secrets/github_token",
-            "-e",
-            "GITHUB_TOKEN_FILE=/run/secrets/github_token",
-            cianalyzer_image,
-            "--repositories",
-            ",".join(repos),
-            "--output",
-            "json",
-        ]
-
-        logger.log_docker_command(cmd, repos)
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-
-        logger.info("CIAnalyzer execution completed successfully (Docker secret method)")
-        return json.loads(result.stdout)
-    finally:
-        # Clean up secret and temporary file
-        try:
-            subprocess.run(["docker", "secret", "rm", secret_name], capture_output=True)
-        except Exception:
-            pass
-        SecurityConfig.secure_cleanup(token_file_path)
-
-
-def _run_with_env_var(github_token: str, repos: list[str], cianalyzer_image: str) -> dict:
-    """Run CIAnalyzer with token passed via environment variable (less secure)."""
-    # Run CIAnalyzer via Docker with token in environment variable
-    cmd = [
-        "docker",
-        "run",
-        "--rm",
-        "-e",
-        f"GITHUB_TOKEN={github_token}",
-        cianalyzer_image,
-        "--repositories",
-        ",".join(repos),
-        "--output",
-        "json",
-    ]
-
-    logger.log_docker_command(cmd, repos)
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-
-    logger.info("CIAnalyzer execution completed successfully (env var method)")
     return json.loads(result.stdout)
 
 
