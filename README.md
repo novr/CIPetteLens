@@ -17,65 +17,38 @@ A minimal, viable CI/CD dashboard that visualizes metrics by wrapping the powerf
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
-
-```bash
-# Clone this repository
-git clone [https://github.com/your-username/CIPetteLens](https://github.com/your-username/CIPetteLens)
-cd CIPetteLens
-
-# Configure environment
-cp env.example .env
-# Edit .env and set GITHUB_TOKEN and TARGET_REPOSITORIES
-
-# Build and run with Docker
-mise run build
-mise run run
-
-# Or use Docker Compose
-docker-compose up -d
-```
-
-### Option 2: Local Development
+### Local Development (Recommended)
 
 ```bash
 # Install uv (if you don't have it)
 curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
 
-# Make sure Docker is installed and running
-docker --version
-
 # Clone this repository
 git clone [https://github.com/your-username/CIPetteLens](https://github.com/your-username/CIPetteLens)
 cd CIPetteLens
 
-# Install dependencies using uv
-uv sync
+# Setup project
+mise run setup
 
 # Configure environment
-cp env.example .env
 # Edit .env and set GITHUB_TOKEN and TARGET_REPOSITORIES
+
+# Start development server
+mise run dev
 ```
 
 ### 3. Run Data Collection
 
 ```bash
-# Using Docker
+# Collect CI/CD metrics
 mise run collect
-
-# Or locally
-uv run collect
 ```
 
-### 4. Start Web Dashboard
+### 4. Access Web Dashboard
 
 ```bash
-# Using Docker (already running if you used mise run run)
-open http://localhost:5000
-
-# Or locally
-uv run web
-open http://localhost:5000
+# Dashboard will be available at
+open http://localhost:5001
 ```
 
 ## Development
@@ -96,24 +69,35 @@ mise run install-dev
 # Show all available tasks
 mise tasks
 
-# Run tests
-mise run test
+# Development
+mise run dev          # Run development server
+mise run web          # Start web server
+mise run collect      # Collect data using CIAnalyzer
+mise run health       # Check application health
 
-# Run security tests
-mise run test-security
+# Testing
+mise run test         # Run all tests
+mise run test-coverage # Run tests with coverage
+mise run test-security # Run security tests
 
-# Run tests with coverage
-mise run test-coverage
+# Code Quality
+mise run lint         # Run linting
+mise run lint-fix     # Fix linting issues
+mise run format       # Format code
+mise run format-check # Check code formatting
+mise run type-check   # Run type checking
 
-# Lint and format
-mise run lint
-mise run format
+# Security
+mise run security-scan # Run security scan
+mise run audit        # Audit dependencies
 
-# Run pre-commit checks
-mise run pre-commit
+# Database
+mise run db-init      # Initialize database
+mise run db-reset     # Reset database
 
-# Run CI pipeline
-mise run ci
+# Workflow
+mise run pre-commit   # Run pre-commit checks
+mise run ci           # Run CI pipeline
 ```
 
 ### Development Workflow

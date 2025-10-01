@@ -24,40 +24,12 @@ description = "Install development dependencies"
 run = "uv sync --extra dev"
 
 # =============================================================================
-# Docker & Container Management
+# Application & Data
 # =============================================================================
 
 [tasks.dev]
-description = "Run development container"
-run = "docker-compose -f docker-compose.dev.yml up"
-
-[tasks.build]
-description = "Build Docker image"
-run = "docker build -t cipettelens:latest ."
-
-[tasks.run]
-description = "Run production container"
-run = "docker-compose up -d"
-
-[tasks.stop]
-description = "Stop all containers"
-run = "docker-compose down && docker-compose -f docker-compose.dev.yml down"
-
-[tasks.clean]
-description = "Clean up containers and images"
-run = "docker-compose down && docker-compose -f docker-compose.dev.yml down && docker rmi cipettelens:latest 2>/dev/null || true && docker system prune -f"
-
-[tasks.logs]
-description = "Show container logs"
-run = "docker-compose logs -f"
-
-[tasks.shell]
-description = "Open shell in container"
-run = "docker run --rm -it -v $(pwd):/app -w /app cipettelens:latest /bin/bash"
-
-# =============================================================================
-# Application & Data
-# =============================================================================
+description = "Run development server"
+run = "uv run web"
 
 [tasks.web]
 description = "Start web server"
@@ -70,6 +42,15 @@ run = "uv run collect"
 [tasks.health]
 description = "Check application health"
 run = "curl -f http://localhost:5001/ || echo 'Application not running'"
+
+# =============================================================================
+# Docker (CIAnalyzer only)
+# =============================================================================
+
+[tasks.docker-clean]
+description = "Clean up Docker containers and images"
+run = "docker-compose down && docker rmi cipettelens:latest 2>/dev/null || true && docker system prune -f"
+
 
 # =============================================================================
 # Code Quality & Testing
