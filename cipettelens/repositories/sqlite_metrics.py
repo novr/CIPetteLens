@@ -1,14 +1,14 @@
 """
-SQLite implementation of metrics repository.
+SQLite implementation of metrics repository with performance optimizations.
 """
 
 import sqlite3
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from ..config import config
-from ..exceptions.database import DatabaseConnectionError, DatabaseException
+from ..exceptions.database import DatabaseException
+from ..infrastructure.cache import get_cache
 from ..models.ci_metrics import (
     BuildMetrics,
     CIMetrics,
@@ -24,173 +24,158 @@ class SQLiteMetricsRepository(MetricsRepository):
 
     def __init__(self, db_path: str | None = None):
         """Initialize SQLite metrics repository."""
-        if db_path is None and config.DATABASE_PATH is None:
+        self.db_path = db_path or config.DATABASE_PATH
+        if not self.db_path:
             raise ValueError("DATABASE_PATH is not configured")
-        # At this point, we know at least one of them is not None
-        actual_path = db_path or config.DATABASE_PATH
-        if actual_path is None:
-            raise ValueError("DATABASE_PATH is not configured")
-        self.db_path = Path(actual_path)
-        self.db_path.parent.mkdir(exist_ok=True)
-        self._init_database()
+
+        # Create a new connection pool for this specific database path
+        # This ensures test isolation
+        from ..infrastructure.database_pool import DatabaseConnectionPool
+
+        self.connection_pool = DatabaseConnectionPool(db_path=self.db_path)
+        self.cache = get_cache()
 
     def _init_database(self) -> None:
         """Initialize the database with required tables."""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-
-                # Create metrics table
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS metrics (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        repository TEXT NOT NULL,
-                        metric_name TEXT NOT NULL,
-                        value REAL NOT NULL,
-                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                    )
-                """
-                )
-
-                # Create indexes for better performance
-                cursor.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS idx_repository_metric
-                    ON metrics(repository, metric_name)
-                """
-                )
-
-                cursor.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS idx_timestamp
-                    ON metrics(timestamp)
-                """
-                )
-
-                conn.commit()
-
-        except sqlite3.Error as e:
-            raise DatabaseConnectionError(
-                f"Failed to initialize database: {e}", str(self.db_path)
-            ) from e
+        # Database initialization is now handled by the connection pool
+        pass
 
     def save_metrics(self, metrics: CIMetrics) -> None:
-        """Save CI metrics to the repository."""
+        """Save CI metrics to the repository with batch optimization."""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self.connection_pool.get_connection() as conn:
                 cursor = conn.cursor()
 
+                # Prepare batch insert data
+                batch_data = []
                 for repo_metrics in metrics.repositories:
-                    self._save_repository_metrics(cursor, repo_metrics)
+                    batch_data.extend(
+                        self._prepare_repository_metrics_data(repo_metrics)
+                    )
 
-                conn.commit()
+                # Execute batch insert
+                if batch_data:
+                    cursor.executemany(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        batch_data,
+                    )
+                    conn.commit()
 
         except sqlite3.Error as e:
             raise DatabaseException(f"Failed to save metrics: {e}") from e
 
-    def _save_repository_metrics(
-        self, cursor: sqlite3.Cursor, repo_metrics: RepositoryMetrics
-    ) -> None:
-        """Save metrics for a single repository."""
-        # Save duration metrics
+    def _prepare_repository_metrics_data(
+        self, repo_metrics: RepositoryMetrics
+    ) -> list[tuple[str, str, float]]:
+        """Prepare repository metrics data for batch insert."""
+        data = []
+
+        # Duration metrics
         if repo_metrics.duration:
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (
-                    repo_metrics.repository,
-                    "duration_average",
-                    repo_metrics.duration.average,
-                ),
-            )
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (
-                    repo_metrics.repository,
-                    "duration_median",
-                    repo_metrics.duration.median,
-                ),
-            )
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (repo_metrics.repository, "duration_p95", repo_metrics.duration.p95),
+            data.extend(
+                [
+                    (
+                        repo_metrics.repository,
+                        "duration_average",
+                        repo_metrics.duration.average,
+                    ),
+                    (
+                        repo_metrics.repository,
+                        "duration_median",
+                        repo_metrics.duration.median,
+                    ),
+                    (
+                        repo_metrics.repository,
+                        "duration_p95",
+                        repo_metrics.duration.p95,
+                    ),
+                ]
             )
 
-        # Save throughput metrics
+        # Throughput metrics
         if repo_metrics.throughput:
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (
-                    repo_metrics.repository,
-                    "throughput_daily",
-                    repo_metrics.throughput.daily,
-                ),
-            )
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (
-                    repo_metrics.repository,
-                    "throughput_weekly",
-                    repo_metrics.throughput.weekly,
-                ),
+            data.extend(
+                [
+                    (
+                        repo_metrics.repository,
+                        "throughput_daily",
+                        repo_metrics.throughput.daily,
+                    ),
+                    (
+                        repo_metrics.repository,
+                        "throughput_weekly",
+                        repo_metrics.throughput.weekly,
+                    ),
+                ]
             )
 
-        # Save build metrics
+        # Build metrics
         if repo_metrics.builds:
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (repo_metrics.repository, "builds_total", repo_metrics.builds.total),
-            )
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (
-                    repo_metrics.repository,
-                    "builds_successful",
-                    repo_metrics.builds.successful,
-                ),
-            )
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (repo_metrics.repository, "builds_failed", repo_metrics.builds.failed),
+            data.extend(
+                [
+                    (
+                        repo_metrics.repository,
+                        "builds_total",
+                        float(repo_metrics.builds.total),
+                    ),
+                    (
+                        repo_metrics.repository,
+                        "builds_successful",
+                        float(repo_metrics.builds.successful),
+                    ),
+                    (
+                        repo_metrics.repository,
+                        "builds_failed",
+                        float(repo_metrics.builds.failed),
+                    ),
+                ]
             )
 
-        # Save MTTR
+        # MTTR
         if repo_metrics.mttr is not None:
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (repo_metrics.repository, "mttr", repo_metrics.mttr),
+            data.append((repo_metrics.repository, "mttr", repo_metrics.mttr))
+
+        # Success rate
+        if repo_metrics.success_rate is not None:
+            data.append(
+                (repo_metrics.repository, "success_rate", repo_metrics.success_rate)
             )
 
-        # Save success rate
-        if repo_metrics.success_rate is not None:
-            cursor.execute(
-                "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                (repo_metrics.repository, "success_rate", repo_metrics.success_rate),
-            )
+        return data
 
     def get_metrics_by_repository(
         self, repository: str, limit: int = 100
     ) -> list[RepositoryMetrics]:
-        """Get metrics for a specific repository."""
+        """Get metrics for a specific repository with caching."""
+        cache_key = f"metrics_repo_{repository}_{limit}"
+
+        # Try cache first
+        cached_result = self.cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result  # type: ignore[no-any-return]
+
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            with self.connection_pool.get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Get latest metrics for the repository
+                # Optimized query with proper indexing
                 cursor.execute(
                     """
                     SELECT repository, metric_name, value, timestamp
                     FROM metrics
                     WHERE repository = ?
-                    ORDER BY timestamp DESC
+                    ORDER BY timestamp DESC, metric_name
                     LIMIT ?
                     """,
                     (repository, limit),
                 )
 
                 rows = cursor.fetchall()
-                return self._build_repository_metrics_from_rows(rows)
+                result = self._build_repository_metrics_from_rows(rows)
+
+                # Cache result for 5 minutes
+                self.cache.set(cache_key, result, ttl=300)
+                return result
 
         except sqlite3.Error as e:
             raise DatabaseException(
@@ -198,18 +183,17 @@ class SQLiteMetricsRepository(MetricsRepository):
             ) from e
 
     def get_all_metrics(self, limit: int = 1000) -> list[RepositoryMetrics]:
-        """Get all metrics."""
+        """Get all metrics with optimized query."""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            with self.connection_pool.get_connection() as conn:
                 cursor = conn.cursor()
 
-                # Get latest metrics for all repositories
+                # Optimized query with proper indexing
                 cursor.execute(
                     """
                     SELECT repository, metric_name, value, timestamp
                     FROM metrics
-                    ORDER BY repository, timestamp DESC
+                    ORDER BY repository, timestamp DESC, metric_name
                     LIMIT ?
                     """,
                     (limit,),
@@ -224,10 +208,16 @@ class SQLiteMetricsRepository(MetricsRepository):
     def get_metrics_by_metric_name(
         self, metric_name: str, limit: int = 100
     ) -> list[RepositoryMetrics]:
-        """Get metrics by metric name."""
+        """Get metrics by metric name with caching."""
+        cache_key = f"metrics_name_{metric_name}_{limit}"
+
+        # Try cache first
+        cached_result = self.cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result  # type: ignore[no-any-return]
+
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            with self.connection_pool.get_connection() as conn:
                 cursor = conn.cursor()
 
                 # Get metrics by metric name
@@ -243,7 +233,11 @@ class SQLiteMetricsRepository(MetricsRepository):
                 )
 
                 rows = cursor.fetchall()
-                return self._build_repository_metrics_from_rows(rows)
+                result = self._build_repository_metrics_from_rows(rows)
+
+                # Cache result for 5 minutes
+                self.cache.set(cache_key, result, ttl=300)
+                return result
 
         except sqlite3.Error as e:
             raise DatabaseException(
@@ -329,10 +323,16 @@ class SQLiteMetricsRepository(MetricsRepository):
     def get_latest_metrics_by_repository(
         self, repository: str
     ) -> RepositoryMetrics | None:
-        """Get the latest metrics for a specific repository."""
+        """Get the latest metrics for a specific repository with caching."""
+        cache_key = f"latest_metrics_{repository}"
+
+        # Try cache first
+        cached_result = self.cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result  # type: ignore[no-any-return]
+
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            with self.connection_pool.get_connection() as conn:
                 cursor = conn.cursor()
 
                 # Get the latest timestamp for the repository
@@ -363,7 +363,12 @@ class SQLiteMetricsRepository(MetricsRepository):
 
                 rows = cursor.fetchall()
                 metrics_list = self._build_repository_metrics_from_rows(rows)
-                return metrics_list[0] if metrics_list else None
+                result = metrics_list[0] if metrics_list else None
+
+                # Cache result for 5 minutes
+                if result:
+                    self.cache.set(cache_key, result, ttl=300)
+                return result
 
         except sqlite3.Error as e:
             raise DatabaseException(
@@ -375,8 +380,7 @@ class SQLiteMetricsRepository(MetricsRepository):
     ) -> list[dict[str, Any]]:
         """Get historical data for a specific metric."""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            with self.connection_pool.get_connection() as conn:
                 cursor = conn.cursor()
 
                 cursor.execute(
@@ -400,7 +404,7 @@ class SQLiteMetricsRepository(MetricsRepository):
     def get_repositories(self) -> list[str]:
         """Get list of all repositories in the database."""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self.connection_pool.get_connection() as conn:
                 cursor = conn.cursor()
 
                 cursor.execute(
@@ -419,7 +423,7 @@ class SQLiteMetricsRepository(MetricsRepository):
     def get_metric_names(self) -> list[str]:
         """Get list of all metric names in the database."""
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self.connection_pool.get_connection() as conn:
                 cursor = conn.cursor()
 
                 cursor.execute(

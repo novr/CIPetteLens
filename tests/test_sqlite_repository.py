@@ -35,7 +35,22 @@ class TestSQLiteMetricsRepository:
     @pytest.fixture
     def repository(self, temp_db_path):
         """Create a repository instance with temporary database."""
-        return SQLiteMetricsRepository(db_path=temp_db_path)
+        # Clear any existing connection pool to ensure clean test environment
+        from cipettelens.infrastructure.database_pool import close_connection_pool
+
+        close_connection_pool()
+
+        # Create a new repository with the temporary database path
+        # This will create a new connection pool for this specific database
+        repo = SQLiteMetricsRepository(db_path=temp_db_path)
+
+        # Clear the cache to ensure clean state
+        from cipettelens.infrastructure.cache import get_cache
+
+        cache = get_cache()
+        cache.clear()
+
+        return repo
 
     @pytest.fixture
     def sample_metrics(self):
@@ -219,19 +234,17 @@ class TestSQLiteMetricsRepository:
 
     def test_database_error_handling(self, repository):
         """Test database error handling."""
-        # Test with invalid database path
+        # Test with invalid database path - this should raise OSError during initialization
+        # as the connection pool tries to create the directory
         with pytest.raises(OSError):  # Should raise OSError for invalid path
-            invalid_repo = SQLiteMetricsRepository(db_path="/invalid/path/db.sqlite")
-            invalid_repo.get_all_metrics()
+            SQLiteMetricsRepository(db_path="/invalid/path/db.sqlite")
 
-    @patch("cipettelens.repositories.sqlite_metrics.sqlite3.connect")
+    @patch("cipettelens.infrastructure.database_pool.sqlite3.connect")
     def test_database_connection_error(self, mock_connect, temp_db_path):
         """Test database connection error handling."""
-        from cipettelens.exceptions.database import DatabaseConnectionError
 
         mock_connect.side_effect = sqlite3.Error("Connection failed")
 
-        with pytest.raises(
-            DatabaseConnectionError
-        ):  # Should raise DatabaseConnectionError
+        # The error should occur during repository initialization
+        with pytest.raises(sqlite3.Error):  # Should raise sqlite3.Error
             SQLiteMetricsRepository(db_path=temp_db_path)
