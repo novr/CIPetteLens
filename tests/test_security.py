@@ -12,32 +12,18 @@ from cipettelens.security import SecurityConfig
 class TestSecurityConfig:
     """Test SecurityConfig class."""
 
-    def test_validate_github_token_valid(self):
-        """Test valid GitHub token validation."""
-        valid_tokens = [
+    def test_validate_github_token_always_true(self):
+        """Test GitHub token validation always returns True (validation disabled)."""
+        # All tokens should pass validation since it's disabled
+        test_tokens = [
             "ghp_1234567890abcdef1234567890abcdef12345678",
-            "gho_1234567890abcdef1234567890abcdef12345678",
-            "ghu_1234567890abcdef1234567890abcdef12345678",
-            "ghs_1234567890abcdef1234567890abcdef12345678",
-            "ghr_1234567890abcdef1234567890abcdef12345678",
-        ]
-
-        for token in valid_tokens:
-            assert SecurityConfig.validate_github_token(token) is True
-
-    def test_validate_github_token_invalid(self):
-        """Test invalid GitHub token validation."""
-        invalid_tokens = [
-            "",
             "invalid_token",
-            "ghp_invalid",
-            "1234567890abcdef1234567890abcdef12345678",
-            "ghp_1234567890abcdef1234567890abcdef123456789",  # Too long
-            "ghp_1234567890abcdef1234567890abcdef1234567",  # Too short
+            "",
+            "any_token_format",
         ]
 
-        for token in invalid_tokens:
-            assert SecurityConfig.validate_github_token(token) is False
+        for token in test_tokens:
+            assert SecurityConfig.validate_github_token(token) is True
 
     def test_validate_repository_format_valid(self):
         """Test valid repository format validation."""
@@ -164,16 +150,16 @@ class TestSecurityConfig:
     @patch.dict(
         os.environ,
         {
-            "GITHUB_TOKEN": "invalid_token",
+            "GITHUB_TOKEN": "any_token_format",
             "TARGET_REPOSITORIES": "owner/repo1,owner/repo2",
             "FLASK_PORT": "5000",
         },
     )
-    def test_validate_environment_invalid_token(self):
-        """Test environment validation with invalid token."""
+    def test_validate_environment_any_token(self):
+        """Test environment validation with any token format (validation disabled)."""
         errors = SecurityConfig.validate_environment()
-        assert "GITHUB_TOKEN" in errors
-        assert "Invalid" in errors["GITHUB_TOKEN"]
+        # Should not have any errors since token validation is disabled
+        assert "GITHUB_TOKEN" not in errors
 
     @patch.dict(
         os.environ,

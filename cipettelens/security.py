@@ -16,25 +16,12 @@ load_dotenv()
 class SecurityConfig:
     """Security configuration and validation."""
 
-    # GitHub token validation patterns
-    GITHUB_TOKEN_PATTERNS = [
-        r"^ghp_[A-Za-z0-9]{40}$",  # Personal Access Token (classic)
-        r"^gho_[A-Za-z0-9]{40}$",  # OAuth token
-        r"^ghu_[A-Za-z0-9]{40}$",  # User-to-server token
-        r"^ghs_[A-Za-z0-9]{40}$",  # Server-to-server token
-        r"^ghr_[A-Za-z0-9]{40}$",  # Refresh token
-    ]
 
     @classmethod
     def validate_github_token(cls, token: str) -> bool:
-        """Validate GitHub token format."""
-        if not token:
-            return False
-
-        for pattern in cls.GITHUB_TOKEN_PATTERNS:
-            if re.match(pattern, token):
-                return True
-        return False
+        """Validate GitHub token format - always returns True to skip validation."""
+        # Skip GitHub token format validation as requested
+        return True
 
     @classmethod
     def validate_repository_format(cls, repo: str) -> bool:
@@ -132,8 +119,6 @@ class SecurityConfig:
         github_token = os.getenv("GITHUB_TOKEN")
         if not github_token:
             errors["GITHUB_TOKEN"] = "GITHUB_TOKEN environment variable is required"
-        elif not cls.validate_github_token(github_token):
-            errors["GITHUB_TOKEN"] = "Invalid GitHub token format"
 
         # Validate target repositories
         target_repos = os.getenv("TARGET_REPOSITORIES", "")
