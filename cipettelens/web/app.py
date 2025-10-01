@@ -4,7 +4,7 @@ Flask web application with clean architecture.
 
 from pathlib import Path
 
-from flask import Flask, render_template
+from flask import Flask, jsonify, render_template, request
 
 from ..config import config
 from ..repositories.sqlite_metrics import SQLiteMetricsRepository
@@ -45,10 +45,61 @@ def create_app() -> Flask:
     def get_metrics():
         """Get metrics API endpoint."""
         try:
-            metrics = metrics_service.get_all_metrics(limit=100)
-            return {"metrics": metrics}
+            limit = request.args.get("limit", 100, type=int)
+            metrics = metrics_service.get_all_metrics(limit=limit)
+            return jsonify({"metrics": [metric.to_dict() for metric in metrics]})
         except Exception as e:
-            return {"error": str(e)}, 500
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/metrics/<repository>")
+    def get_metrics_by_repository(repository: str):
+        """Get metrics for a specific repository."""
+        try:
+            limit = request.args.get("limit", 100, type=int)
+            metrics = metrics_service.get_metrics_by_repository(repository, limit=limit)
+            return jsonify({"metrics": [metric.to_dict() for metric in metrics]})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/metrics/<repository>/latest")
+    def get_latest_metrics(repository: str):
+        """Get latest metrics for a specific repository."""
+        try:
+            latest = metrics_repository.get_latest_metrics_by_repository(repository)
+            if latest:
+                return jsonify({"metrics": latest.to_dict()})
+            else:
+                return jsonify({"error": "No metrics found for repository"}), 404
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/metrics/<repository>/<metric_name>/history")
+    def get_metric_history(repository: str, metric_name: str):
+        """Get metric history for a specific repository and metric."""
+        try:
+            limit = request.args.get("limit", 100, type=int)
+            history = metrics_repository.get_metric_history(repository, metric_name, limit)
+            return jsonify({"history": history})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/repositories")
+    def get_repositories():
+        """Get list of all repositories."""
+        try:
+            repositories = metrics_repository.get_repositories()
+            return jsonify({"repositories": repositories})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/metric-names")
+    def get_metric_names():
+        """Get list of all metric names."""
+        try:
+            metric_names = metrics_repository.get_metric_names()
+            return jsonify({"metric_names": metric_names})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     return app
 

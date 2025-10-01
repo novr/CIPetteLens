@@ -30,9 +30,6 @@ uv sync
 # 例: curl -L "[https://github.com/Kesin11/CIAnalyzer/releases/download/v0.12.0/](https://github.com/Kesin11/CIAnalyzer/releases/download/v0.12.0/)..." | tar xz -C ./bin
 
 # 3. 設定ファイルの作成
-# env.exampleをコピーして、GitHubのトークンなどを設定
-cp env.example .env
-vi .env
 
 # 4. データ収集の実行
 uv run collect
