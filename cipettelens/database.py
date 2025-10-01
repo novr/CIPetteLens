@@ -15,7 +15,10 @@ class Database:
     def __init__(self, db_path: str | None = None):
         if db_path is None and config.DATABASE_PATH is None:
             raise ValueError("DATABASE_PATH is not configured")
-        self.db_path = Path(db_path or config.DATABASE_PATH)
+        # At this point, we know at least one of them is not None
+        actual_path = db_path or config.DATABASE_PATH
+        assert actual_path is not None  # Type assertion for mypy
+        self.db_path = Path(actual_path)
         self.db_path.parent.mkdir(exist_ok=True)
         self.init_database()
 
