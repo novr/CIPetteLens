@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# uv
+.python-version
+
+# Environment Variables
+.env
+.envrc
+.env.local
+.env.production
+.env.staging
+
+# Security
+*.token
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Last run tracking
+last_run.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flask
+instance/
+.webassets-cache
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
