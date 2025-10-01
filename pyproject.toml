@@ -46,8 +46,9 @@ Repository = "https://github.com/your-username/CIPetteLens"
 Issues = "https://github.com/your-username/CIPetteLens/issues"
 
 [project.scripts]
-collect = "cipettelens.lens:main"
-web = "cipettelens.app:main"
+cipettelens = "cipettelens.main:main"
+web = "cipettelens.web.app:main"
+collect = "cipettelens.cli.collect:collect_metrics"
 
 [tool.ruff]
 target-version = "py311"
