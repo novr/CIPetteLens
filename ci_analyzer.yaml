@@ -1,0 +1,15 @@
+github:
+  repos:
+    - name: novr/CIPetteLens
+      tests:
+        - '**/*.xml'
+    - name: novr/CIPette
+      tests:
+        - '**/*.xml'
+  exporter:
+    local:
+      outDir: ./output
+      format: json
+  lastRunStore:
+    backend: local
+    path: .ci_analyzer/last_run/github.json

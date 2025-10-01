@@ -5,6 +5,7 @@ Lens module for running CIAnalyzer and processing results.
 import json
 import sqlite3
 import subprocess
+import yaml
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -69,16 +70,62 @@ def run_cianalyzer():
         raise ValueError(error_msg)
 
     github_token = Config.GITHUB_TOKEN
-    target_repos = ",".join(Config.TARGET_REPOSITORIES)
     cianalyzer_image = Config.CIAnalyzer_IMAGE
 
-    # Convert comma-separated repos to list
-    repos = [repo.strip() for repo in target_repos.split(",")]
-
+    # Get repositories from ci_analyzer.yaml
+    repos = _get_repos_from_config()
     logger.log_github_token_usage("data collection", repos)
 
-    # Use stdin method for token passing
-    return _run_with_stdin(github_token, repos, cianalyzer_image)
+    # Use stdin method for token passing with ci_analyzer.yaml
+    return _run_with_stdin_and_config(github_token, cianalyzer_image)
+
+
+def _get_repos_from_config() -> list[str]:
+    """Get repository list from ci_analyzer.yaml file."""
+    config_path = Path("ci_analyzer.yaml")
+    if not config_path.exists():
+        raise FileNotFoundError("ci_analyzer.yaml file not found")
+    
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    repos = []
+    for repo_config in config.get('github', {}).get('repos', []):
+        repos.append(repo_config['name'])
+    
+    return repos
+
+
+def _run_with_stdin_and_config(github_token: str, cianalyzer_image: str) -> dict:
+    """Run CIAnalyzer with token passed via stdin and ci_analyzer.yaml config."""
+    # Run CIAnalyzer via Docker with token passed via stdin and config file
+    cmd = [
+        "docker",
+        "run",
+        "--rm",
+        "-i",
+        "-v",
+        f"{Path.cwd()}:/app",
+        "-w",
+        "/app",
+        "-e",
+        "GITHUB_TOKEN_FILE=/dev/stdin",
+        cianalyzer_image,
+        "-c",
+        "ci_analyzer.yaml",
+    ]
+
+    logger.info(f"Executing Docker command: {' '.join(cmd)}")
+    result = subprocess.run(
+        cmd, 
+        input=github_token, 
+        capture_output=True, 
+        text=True, 
+        check=True
+    )
+
+    logger.info("CIAnalyzer execution completed successfully (stdin + config method)")
+    return json.loads(result.stdout)
 
 
 def _run_with_stdin(github_token: str, repos: list[str], cianalyzer_image: str) -> dict:
