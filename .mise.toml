@@ -7,6 +7,35 @@ LOG_LEVEL = "INFO"
 FLASK_DEBUG = "False"
 FLASK_PORT = "5001"
 
+# =============================================================================
+# Development & Setup
+# =============================================================================
+
+[tasks.setup]
+description = "Complete project setup"
+run = [
+    "cp env.example .env",
+    "uv sync --extra dev",
+    "mkdir -p logs db",
+    "echo 'Setup complete! Edit .env file with your configuration.'"
+]
+
+[tasks.install]
+description = "Install dependencies"
+run = "uv sync"
+
+[tasks.install-dev]
+description = "Install development dependencies"
+run = "uv sync --extra dev"
+
+# =============================================================================
+# Docker & Container Management
+# =============================================================================
+
+[tasks.dev]
+description = "Run development container"
+run = "docker-compose -f docker-compose.dev.yml up"
+
 [tasks.build]
 description = "Build Docker image"
 run = "docker build -t cipettelens:latest ."
@@ -15,21 +44,45 @@ run = "docker build -t cipettelens:latest ."
 description = "Run production container"
 run = "docker-compose up -d"
 
-[tasks.dev]
-description = "Run development container"
-run = "docker-compose -f docker-compose.dev.yml up"
-
 [tasks.stop]
 description = "Stop all containers"
 run = "docker-compose down && docker-compose -f docker-compose.dev.yml down"
 
+[tasks.clean]
+description = "Clean up containers and images"
+run = "docker-compose down && docker-compose -f docker-compose.dev.yml down && docker rmi cipettelens:latest 2>/dev/null || true && docker system prune -f"
+
+[tasks.logs]
+description = "Show container logs"
+run = "docker-compose logs -f"
+
+[tasks.shell]
+description = "Open shell in container"
+run = "docker run --rm -it -v $(pwd):/app -w /app cipettelens:latest /bin/bash"
+
+# =============================================================================
+# Application & Data
+# =============================================================================
+
+[tasks.web]
+description = "Start web server"
+run = "uv run web"
+
+[tasks.collect]
+description = "Collect data using CIAnalyzer"
+run = "uv run collect"
+
+[tasks.health]
+description = "Check application health"
+run = "curl -f http://localhost:${FLASK_PORT:-5001}/ || echo 'Application not running'"
+
+# =============================================================================
+# Code Quality & Testing
+# =============================================================================
+
 [tasks.test]
 description = "Run all tests"
 run = "uv run pytest"
-
-[tasks.test-security]
-description = "Run security tests"
-run = "uv run pytest tests/test_security.py -v"
 
 [tasks.test-coverage]
 description = "Run tests with coverage"
@@ -55,58 +108,25 @@ run = "uv run black --check ."
 description = "Run type checking"
 run = "uv run mypy cipettelens/"
 
-[tasks.install]
-description = "Install dependencies"
-run = "uv sync"
-
-[tasks.install-dev]
-description = "Install development dependencies"
-run = "uv sync --extra dev"
-
-[tasks.collect]
-description = "Collect data using CIAnalyzer"
-run = "uv run collect"
-
-[tasks.web]
-description = "Start web server"
-run = "uv run web"
-
-[tasks.clean]
-description = "Clean up containers and images"
-run = "docker-compose down && docker-compose -f docker-compose.dev.yml down && docker rmi cipettelens:latest 2>/dev/null || true && docker system prune -f"
-
-[tasks.logs]
-description = "Show container logs"
-run = "docker-compose logs -f"
-
-[tasks.shell]
-description = "Open shell in container"
-run = "docker run --rm -it -v $(pwd):/app -w /app cipettelens:latest /bin/bash"
+# =============================================================================
+# Security & Auditing
+# =============================================================================
 
 [tasks.security-scan]
 description = "Run security scan"
 run = "uv run ruff check --select S"
 
+[tasks.test-security]
+description = "Run security tests"
+run = "uv run pytest tests/test_security.py -v"
+
 [tasks.audit]
 description = "Audit dependencies for security issues"
 run = "uv tree --format=json | jq '.packages[] | select(.vulnerabilities)'"
 
-[tasks.db-init]
-description = "Initialize database"
-run = "uv run python -c 'from cipettelens.database import Database; db = Database(); print(\"Database initialized\")'"
-
-[tasks.db-reset]
-description = "Reset database"
-run = "rm -f db/data.sqlite && uv run python -c 'from cipettelens.database import Database; db = Database(); print(\"Database reset\")'"
-
-[tasks.setup]
-description = "Complete project setup"
-run = [
-    "cp env.example .env",
-    "uv sync --extra dev",
-    "mkdir -p logs db",
-    "echo 'Setup complete! Edit .env file with your configuration.'"
-]
+# =============================================================================
+# CI/CD & Workflow
+# =============================================================================
 
 [tasks.ci]
 description = "Run CI pipeline"
@@ -125,10 +145,22 @@ run = [
     "uv run pytest"
 ]
 
+# =============================================================================
+# Database Management
+# =============================================================================
+
+[tasks.db-init]
+description = "Initialize database"
+run = "uv run python -c 'from cipettelens.lens import save_to_database; save_to_database({}); print(\"Database initialized\")'"
+
+[tasks.db-reset]
+description = "Reset database"
+run = "rm -f db/data.sqlite && uv run python -c 'from cipettelens.lens import save_to_database; save_to_database({}); print(\"Database reset\")'"
+
+# =============================================================================
+# Documentation
+# =============================================================================
+
 [tasks.docs]
 description = "Generate documentation"
 run = "uv run python -c 'import cipettelens; help(cipettelens)' > docs/api.md"
-
-[tasks.health]
-description = "Check application health"
-run = "curl -f http://localhost:${FLASK_PORT:-5000}/ || echo 'Application not running'"
