@@ -1,0 +1,127 @@
+"""
+Database operations for CIPetteLens.
+"""
+
+import sqlite3
+from pathlib import Path
+from typing import Any
+
+from .config import Config
+
+
+class Database:
+    """SQLite database operations."""
+
+    def __init__(self, db_path: str | None = None):
+        self.db_path = Path(db_path or Config.DATABASE_PATH)
+        self.db_path.parent.mkdir(exist_ok=True)
+        self.init_database()
+
+    def init_database(self):
+        """Initialize the database with required tables."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            # Create metrics table
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS metrics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    repository TEXT NOT NULL,
+                    metric_name TEXT NOT NULL,
+                    value REAL NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """
+            )
+
+            # Create indexes for better performance
+            cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_repository_metric
+                ON metrics(repository, metric_name)
+            """
+            )
+
+            cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_timestamp
+                ON metrics(timestamp)
+            """
+            )
+
+            conn.commit()
+
+    def insert_metric(self, repository: str, metric_name: str, value: float):
+        """Insert a single metric into the database."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO metrics (repository, metric_name, value)
+                VALUES (?, ?, ?)
+            """,
+                (repository, metric_name, value),
+            )
+            conn.commit()
+
+    def insert_metrics(self, metrics: list[dict[str, Any]]):
+        """Insert multiple metrics into the database."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.executemany(
+                """
+                INSERT INTO metrics (repository, metric_name, value)
+                VALUES (?, ?, ?)
+            """,
+                [(m["repository"], m["metric_name"], m["value"]) for m in metrics],
+            )
+            conn.commit()
+
+    def get_latest_metrics(self, repository: str | None = None) -> list[dict[str, Any]]:
+        """Get the latest metrics for a repository or all repositories."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            if repository:
+                cursor.execute(
+                    """
+                    SELECT repository, metric_name, value, timestamp
+                    FROM metrics
+                    WHERE repository = ?
+                    ORDER BY timestamp DESC
+                """,
+                    (repository,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT repository, metric_name, value, timestamp
+                    FROM metrics
+                    ORDER BY timestamp DESC
+                """
+                )
+
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_metric_history(
+        self, repository: str, metric_name: str, limit: int = 100
+    ) -> list[dict[str, Any]]:
+        """Get historical data for a specific metric."""
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            cursor.execute(
+                """
+                SELECT repository, metric_name, value, timestamp
+                FROM metrics
+                WHERE repository = ? AND metric_name = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            """,
+                (repository, metric_name, limit),
+            )
+
+            return [dict(row) for row in cursor.fetchall()]
