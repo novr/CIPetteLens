@@ -3,9 +3,10 @@ Logging configuration for CIPetteLens.
 """
 
 import logging
-import os
 import sys
 from pathlib import Path
+
+from .config import config
 
 
 class SecureLogger:
@@ -106,4 +107,4 @@ class SecureLogger:
 
 
 # Global logger instance
-logger = SecureLogger("cipettelens", os.getenv("LOG_LEVEL", "INFO"))
+logger = SecureLogger("cipettelens", config.LOG_LEVEL)

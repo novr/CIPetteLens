@@ -3,20 +3,13 @@ Lens module for running CIAnalyzer and processing results.
 """
 
 import json
-import os
 import subprocess
 from pathlib import Path
 
-import yaml
-from dotenv import load_dotenv
-
-from .config import Config
+from .config import config
 from .database import Database
 from .logger import logger
 from .security import SecurityConfig
-
-# Load environment variables
-load_dotenv()
 
 
 def generate_mock_data():
@@ -24,7 +17,7 @@ def generate_mock_data():
     import random
     from datetime import datetime
 
-    target_repos = Config.TARGET_REPOSITORIES
+    target_repos = config.TARGET_REPOSITORIES
     mock_data = {"timestamp": datetime.now().isoformat(), "repositories": {}}
 
     for repo in target_repos:
@@ -54,7 +47,7 @@ def generate_mock_data():
 def run_cianalyzer():
     """Run CIAnalyzer via Docker and return the JSON output."""
     # Check if we should use mock data
-    if Config.CIAnalyzer_IMAGE == "hello-world" or not Config.CIAnalyzer_IMAGE:
+    if config.CIANALYZER_IMAGE == "hello-world" or not config.CIANALYZER_IMAGE:
         logger.info("Using mock data for testing")
         return generate_mock_data()
 
@@ -67,38 +60,21 @@ def run_cianalyzer():
         logger.error(error_msg)
         raise ValueError(error_msg)
 
-    github_token = Config.GITHUB_TOKEN
-    cianalyzer_image = Config.CIAnalyzer_IMAGE
+    github_token = config.GITHUB_TOKEN
+    cianalyzer_image = config.CIANALYZER_IMAGE
 
     # Get repositories from ci_analyzer.yaml
-    repos = _get_repos_from_config()
+    repos = config.get_repositories_from_config()
     logger.log_github_token_usage("data collection", repos)
 
     # Use stdin method for token passing with ci_analyzer.yaml
     return _run_with_stdin_and_config(github_token, cianalyzer_image)
 
 
-def _get_repos_from_config() -> list[str]:
-    """Get repository list from ci_analyzer.yaml file."""
-    config_path = Path("ci_analyzer.yaml")
-    if not config_path.exists():
-        raise FileNotFoundError("ci_analyzer.yaml file not found")
-
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
-
-    repos = []
-    for repo_config in config.get("github", {}).get("repos", []):
-        repos.append(repo_config["name"])
-
-    return repos
-
-
 def _run_with_stdin_and_config(github_token: str, cianalyzer_image: str) -> dict:
     """Run CIAnalyzer with token passed via stdin and ci_analyzer.yaml config."""
     # Check for debug mode
-    debug_mode = os.getenv("CI_ANALYZER_DEBUG", "0")
-    use_debug = debug_mode.lower() in ("1", "true", "yes", "on")
+    use_debug = config.CI_ANALYZER_DEBUG
 
     # Run CIAnalyzer via Docker with token passed via stdin and config file
     cmd = [

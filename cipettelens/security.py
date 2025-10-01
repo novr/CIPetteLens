@@ -7,10 +7,7 @@ import re
 import secrets
 import tempfile
 
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
+from .config import config
 
 
 class SecurityConfig:
@@ -115,20 +112,19 @@ class SecurityConfig:
         errors = {}
 
         # Validate GitHub token
-        github_token = os.getenv("GITHUB_TOKEN")
-        if not github_token:
+        if not config.GITHUB_TOKEN:
             errors["GITHUB_TOKEN"] = "GITHUB_TOKEN environment variable is required"
 
         # Validate target repositories
-        target_repos = os.getenv("TARGET_REPOSITORIES", "")
-        if not target_repos:
+        if not config.TARGET_REPOSITORIES:
             errors["TARGET_REPOSITORIES"] = (
                 "TARGET_REPOSITORIES environment variable is required"
             )
         else:
-            repos = [repo.strip() for repo in target_repos.split(",")]
             invalid_repos = [
-                repo for repo in repos if not cls.validate_repository_format(repo)
+                repo
+                for repo in config.TARGET_REPOSITORIES
+                if not cls.validate_repository_format(repo)
             ]
             if invalid_repos:
                 errors["TARGET_REPOSITORIES"] = (
@@ -136,9 +132,8 @@ class SecurityConfig:
                 )
 
         # Validate Flask port
-        flask_port = os.getenv("FLASK_PORT", "5000")
-        if not cls.validate_port(flask_port):
-            errors["FLASK_PORT"] = f"Invalid port number: {flask_port}"
+        if not cls.validate_port(str(config.FLASK_PORT)):
+            errors["FLASK_PORT"] = f"Invalid port number: {config.FLASK_PORT}"
 
         return errors
 

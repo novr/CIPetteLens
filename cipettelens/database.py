@@ -6,14 +6,14 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from .config import Config
+from .config import config
 
 
 class Database:
     """SQLite database operations."""
 
     def __init__(self, db_path: str | None = None):
-        self.db_path = Path(db_path or Config.DATABASE_PATH)
+        self.db_path = Path(db_path or config.DATABASE_PATH)
         self.db_path.parent.mkdir(exist_ok=True)
         self.init_database()
 

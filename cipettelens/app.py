@@ -2,14 +2,11 @@
 Flask web application for CIPetteLens dashboard.
 """
 
-import os
 from pathlib import Path
 
-from dotenv import load_dotenv
 from flask import Flask, render_template
 
-# Load environment variables
-load_dotenv()
+from .config import config
 
 # Get the directory containing this file
 current_dir = Path(__file__).parent
@@ -22,8 +19,8 @@ static_folder = str(project_root / "static")
 app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 
 # Configuration
-app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "False").lower() == "true"
-app.config["PORT"] = int(os.getenv("FLASK_PORT", "5000"))
+app.config["DEBUG"] = config.FLASK_DEBUG
+app.config["PORT"] = config.FLASK_PORT
 
 
 @app.route("/")
