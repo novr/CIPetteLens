@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Enable version updates for Python dependencies
+  # Enable version updates for Python dependencies via uv
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -14,3 +14,10 @@ updates:
           - "ruff*"
           - "black*"
           - "isort*"
+          - "mypy*"
+          - "coverage*"
+      # Group security-related dependencies
+      security-dependencies:
+        patterns:
+          - "cryptography*"
+          - "python-dotenv*"
