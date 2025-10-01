@@ -96,22 +96,15 @@ description = "Run tests in watch mode"
 run = "uv run pytest --watch"
 
 # =============================================================================
-# CI/CD
+# Pre-commit
 # =============================================================================
-
-[tasks.ci]
-description = "Run CI pipeline (lint + format + test)"
-run = [
-    "uv run ruff check",
-    "uv run black --check .",
-    "uv run pytest"
-]
 
 [tasks.pre-commit]
 description = "Run pre-commit checks (fix + format + test)"
 run = [
     "uv run ruff check --fix",
     "uv run black .",
+    "uv run mypy cipettelens/",
     "uv run pytest"
 ]
 

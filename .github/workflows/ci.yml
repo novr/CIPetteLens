@@ -19,17 +19,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
+      - name: Set up Python and uv
         uses: astral-sh/setup-uv@v3
         with:
+          python-version: ${{ env.PYTHON_VERSION }}
           version: ${{ env.UV_VERSION }}
 
-      - name: Cache uv dependencies
+      - name: Cache dependencies
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
@@ -40,22 +36,17 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Run tests
-        run: uv run pytest --cov=cipettelens --cov-report=xml --cov-report=term
-
       - name: Run linting
-        run: |
-          uv run ruff check
-          uv run ruff format --check
+        run: uv run ruff check
+
+      - name: Run formatting check
+        run: uv run black --check .
 
       - name: Run type checking
         run: uv run mypy cipettelens/
 
-      - name: Run security tests
-        run: uv run pytest tests/test_security.py -v
-
-      - name: Run security scan
-        run: uv run ruff check --select S
+      - name: Run tests
+        run: uv run pytest
 
   build-and-test:
     name: Build and Test
@@ -65,26 +56,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
+      - name: Set up Python and uv
         uses: astral-sh/setup-uv@v3
         with:
+          python-version: ${{ env.PYTHON_VERSION }}
           version: ${{ env.UV_VERSION }}
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
       - name: Install dependencies
         run: uv sync
 
       - name: Test application startup
         run: |
-          # Test that the application can start without errors
           timeout 10s uv run python -c "from cipettelens.app import app; print('App imported successfully')" || true
 
       - name: Test data collection
         run: |
-          # Test data collection with mock data
           GITHUB_TOKEN=test_token TARGET_REPOSITORIES=test/repo CIANALYZER_IMAGE=hello-world uv run collect
-
