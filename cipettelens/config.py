@@ -30,6 +30,9 @@ class Config:
 
     # CIAnalyzer configuration
     CIAnalyzer_IMAGE = os.getenv("CIANALYZER_IMAGE", "kesin11/cianalyzer:latest")
+    
+    # Security configuration
+    TOKEN_SECURITY_LEVEL = os.getenv("TOKEN_SECURITY_LEVEL", "auto")  # auto, file, stdin, secret, env
 
     @classmethod
     def validate(cls):
