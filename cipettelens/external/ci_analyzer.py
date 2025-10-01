@@ -52,13 +52,13 @@ class CIAnalyzerClient:
         # Ensure we're only running docker commands
         if not cmd or cmd[0] != "docker":
             raise CIAnalyzerExecutionError("Only Docker commands are allowed")
-        
+
         # Check for dangerous flags
         dangerous_flags = ["--privileged", "--user=root", "--cap-add", "--device"]
         for flag in dangerous_flags:
             if any(flag in arg for arg in cmd):
                 raise CIAnalyzerExecutionError(f"Dangerous flag detected: {flag}")
-        
+
         # Validate image name format
         if len(cmd) > 1:
             image_arg = cmd[-1] if cmd[-1] != "--debug" else cmd[-2]
@@ -68,8 +68,9 @@ class CIAnalyzerClient:
     def _is_valid_image_name(self, image_name: str) -> bool:
         """Validate Docker image name format."""
         import re
+
         # Basic validation for Docker image names
-        pattern = r'^[a-zA-Z0-9][a-zA-Z0-9_.-]*(/[a-zA-Z0-9][a-zA-Z0-9_.-]*)?(:[a-zA-Z0-9_.-]+)?$'
+        pattern = r"^[a-zA-Z0-9][a-zA-Z0-9_.-]*(/[a-zA-Z0-9][a-zA-Z0-9_.-]*)?(:[a-zA-Z0-9_.-]+)?$"
         return bool(re.match(pattern, image_name))
 
     def _run_cianalyzer(self, github_token: str) -> dict:
@@ -104,7 +105,7 @@ class CIAnalyzerClient:
         try:
             # Validate command components for security
             self._validate_command(cmd)
-            
+
             # S603: subprocess call is validated and controlled
             result = subprocess.run(
                 cmd,

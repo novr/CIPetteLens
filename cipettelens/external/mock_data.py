@@ -32,14 +32,14 @@ class MockDataGenerator:
         # Generate duration metrics using cryptographically secure random
         duration = DurationMetrics(
             average=secrets.randbelow(2500) / 100 + 5.0,  # 5.0 to 30.0
-            median=secrets.randbelow(1700) / 100 + 8.0,   # 8.0 to 25.0
-            p95=secrets.randbelow(3000) / 100 + 15.0,     # 15.0 to 45.0
+            median=secrets.randbelow(1700) / 100 + 8.0,  # 8.0 to 25.0
+            p95=secrets.randbelow(3000) / 100 + 15.0,  # 15.0 to 45.0
         )
 
         # Generate throughput metrics
         throughput = ThroughputMetrics(
-            daily=secrets.randbelow(4000) / 100 + 10.0,   # 10.0 to 50.0
-            weekly=secrets.randbelow(15000) / 100 + 50.0, # 50.0 to 200.0
+            daily=secrets.randbelow(4000) / 100 + 10.0,  # 10.0 to 50.0
+            weekly=secrets.randbelow(15000) / 100 + 50.0,  # 50.0 to 200.0
         )
 
         # Generate build metrics
