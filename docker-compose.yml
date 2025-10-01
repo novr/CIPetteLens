@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  cipettelens:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - TARGET_REPOSITORIES=${TARGET_REPOSITORIES}
+      - FLASK_DEBUG=${FLASK_DEBUG:-False}
+      - FLASK_PORT=5000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ./logs:/app/logs
+      - ./db:/app/db
+      - /var/run/docker.sock:/var/run/docker.sock # For Docker-in-Docker
+    depends_on:
+      - cianalyzer
+    networks:
+      - cipettelens-network
+
+  cianalyzer:
+    image: kesin11/cianalyzer:latest
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - cipettelens-network
+    profiles:
+      - tools # Only start when explicitly requested
+
+networks:
+  cipettelens-network:
+    driver: bridge
+
+volumes:
+  logs:
+  db:

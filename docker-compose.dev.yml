@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  cipettelens-dev:
+    build:
+      context: .
+      target: builder # Use builder stage for development
+    ports:
+      - "5000:5000"
+      - "5678:5678" # For debugger
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - TARGET_REPOSITORIES=${TARGET_REPOSITORIES}
+      - FLASK_DEBUG=True
+      - FLASK_PORT=5000
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - .:/app
+      - /app/.venv # Exclude virtual environment
+      - ./logs:/app/logs
+      - ./db:/app/db
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: ["uv", "run", "web"]
+    networks:
+      - cipettelens-dev-network
+
+networks:
+  cipettelens-dev-network:
+    driver: bridge
