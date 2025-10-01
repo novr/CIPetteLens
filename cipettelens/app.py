@@ -3,6 +3,7 @@ Flask web application for CIPetteLens dashboard.
 """
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from flask import Flask, render_template
@@ -10,7 +11,15 @@ from flask import Flask, render_template
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__, template_folder="/app/templates", static_folder="/app/static")
+# Get the directory containing this file
+current_dir = Path(__file__).parent
+project_root = current_dir.parent
+
+# Set template and static folders relative to project root
+template_folder = str(project_root / "templates")
+static_folder = str(project_root / "static")
+
+app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 
 # Configuration
 app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "False").lower() == "true"
