@@ -4,8 +4,8 @@ A minimal, viable CI/CD dashboard that visualizes metrics by wrapping the powerf
 
 ## Features
 
--   📊 Wraps `CIAnalyzer` to collect and analyze GitHub Actions workflow data via Docker.
--   💾 Stores pre-calculated metrics from `CIAnalyzer`'s report into a local SQLite database.
+-   📊 Collects and analyzes GitHub Actions workflow data using CIAnalyzer.
+-   💾 Stores pre-calculated metrics from CIAnalyzer's report into a local SQLite database.
 -   🚀 Provides a lightweight web interface to visualize key metrics: Duration, Success Rate, Throughput, and MTTR.
 -   ⚙️ Simple, configuration-based setup for target repositories.
 
@@ -13,7 +13,6 @@ A minimal, viable CI/CD dashboard that visualizes metrics by wrapping the powerf
 
 -   Python 3.11+
 -   [uv](https://github.com/astral-sh/uv) - A fast Python package installer and resolver.
--   **Docker** - To run the `CIAnalyzer` engine.
 
 ## Quick Start
 
@@ -122,16 +121,23 @@ CIPetteLens/
 │   ├── app.py              # Flask web dashboard
 │   ├── config.py           # Configuration loader
 │   ├── database.py         # SQLite operations
-│   └── lens.py             # Wrapper script for CIAnalyzer (via Docker)
-├── db/                     # For database files
+│   ├── lens.py             # CIAnalyzer integration
+│   ├── logger.py           # Logging configuration
+│   └── security.py         # Security utilities
+├── db/                     # Database files
 │   └── data.sqlite         # SQLite database file
 ├── templates/              # HTML templates
 │   └── dashboard.html
 ├── static/                 # CSS stylesheets
 │   └── style.css
 ├── tests/                  # Test suite
-│   └── test_lens.py
+│   ├── test_lens.py
+│   └── test_security.py
+├── .github/                # GitHub Actions CI/CD
+│   └── workflows/
+│       └── ci.yml
 ├── env.example             # Environment variable template
+├── .mise.toml              # Task runner configuration
 ├── pyproject.toml          # Project metadata & dependencies
 └── README.md
 ```

@@ -43,13 +43,6 @@ run = "uv run collect"
 description = "Check application health"
 run = "curl -f http://localhost:5001/ || echo 'Application not running'"
 
-# =============================================================================
-# Docker (CIAnalyzer only)
-# =============================================================================
-
-[tasks.docker-clean]
-description = "Clean up Docker containers and images"
-run = "docker-compose down && docker rmi cipettelens:latest 2>/dev/null || true && docker system prune -f"
 
 
 # =============================================================================
