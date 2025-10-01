@@ -3,6 +3,7 @@ Lens module for running CIAnalyzer and processing results.
 """
 
 import json
+import os
 import sqlite3
 import subprocess
 import yaml
@@ -98,6 +99,10 @@ def _get_repos_from_config() -> list[str]:
 
 def _run_with_stdin_and_config(github_token: str, cianalyzer_image: str) -> dict:
     """Run CIAnalyzer with token passed via stdin and ci_analyzer.yaml config."""
+    # Check for debug mode
+    debug_mode = os.getenv("CI_ANALYZER_DEBUG", "0")
+    use_debug = debug_mode.lower() in ("1", "true", "yes", "on")
+    
     # Run CIAnalyzer via Docker with token passed via stdin and config file
     cmd = [
         "docker",
@@ -110,10 +115,17 @@ def _run_with_stdin_and_config(github_token: str, cianalyzer_image: str) -> dict
         "/app",
         "-e",
         "GITHUB_TOKEN_FILE=/dev/stdin",
-        cianalyzer_image,
-        "-c",
-        "ci_analyzer.yaml",
     ]
+    
+    # Add debug environment variable if enabled
+    if use_debug:
+        cmd.extend(["-e", "CI_ANALYZER_DEBUG=1"])
+    
+    cmd.extend([cianalyzer_image, "-c", "ci_analyzer.yaml"])
+    
+    # Add --debug flag if debug mode is enabled
+    if use_debug:
+        cmd.append("--debug")
 
     logger.info(f"Executing Docker command: {' '.join(cmd)}")
     result = subprocess.run(
