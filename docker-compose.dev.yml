@@ -6,13 +6,13 @@ services:
       context: .
       target: builder # Use builder stage for development
     ports:
-      - "5000:5000"
+      - "${FLASK_PORT:-5001}:${FLASK_PORT:-5001}"
       - "5678:5678" # For debugger
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - TARGET_REPOSITORIES=${TARGET_REPOSITORIES}
       - FLASK_DEBUG=True
-      - FLASK_PORT=5000
+      - FLASK_PORT=${FLASK_PORT:-5001}
       - LOG_LEVEL=DEBUG
     volumes:
       - .:/app

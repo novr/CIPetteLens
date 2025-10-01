@@ -6,7 +6,7 @@ docker = "latest"
 [env]
 LOG_LEVEL = "INFO"
 FLASK_DEBUG = "False"
-FLASK_PORT = "5000"
+FLASK_PORT = "5001"
 
 [tasks.build]
 description = "Build Docker image"
@@ -132,4 +132,4 @@ run = "uv run python -c 'import cipettelens; help(cipettelens)' > docs/api.md"
 
 [tasks.health]
 description = "Check application health"
-run = "curl -f http://localhost:5000/ || echo 'Application not running'"
+run = "curl -f http://localhost:${FLASK_PORT:-5000}/ || echo 'Application not running'"

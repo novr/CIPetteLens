@@ -35,7 +35,9 @@ FROM python:3.11-slim as production
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    FLASK_PORT=5001 \
+    FLASK_DEBUG=False
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -66,12 +68,12 @@ RUN mkdir -p logs db && \
 # Switch to non-root user
 USER cipettelens
 
-# Expose port
-EXPOSE 5000
+# Expose port (use environment variable with default)
+EXPOSE ${FLASK_PORT:-5001}
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/ || exit 1
+    CMD curl -f http://localhost:${FLASK_PORT:-5001}/ || exit 1
 
 # Default command
 CMD ["python", "-m", "cipettelens.app"]
