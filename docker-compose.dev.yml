@@ -10,6 +10,7 @@ services:
       - FLASK_DEBUG=True
       - FLASK_PORT=${FLASK_PORT:-5001}
       - LOG_LEVEL=DEBUG
+      - PYTHONPATH=/app
     volumes:
       - .:/app
       - /app/.venv # Exclude virtual environment

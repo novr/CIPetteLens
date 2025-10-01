@@ -38,10 +38,14 @@ RUN mkdir -p logs db
 
 # Create non-root user
 RUN groupadd -r cipettelens && useradd -r -g cipettelens cipettelens
-RUN chown -R cipettelens:cipettelens /app
+RUN mkdir -p /home/cipettelens/.cache/uv
+RUN chown -R cipettelens:cipettelens /app /home/cipettelens
 
 # Switch to non-root user
 USER cipettelens
+
+# Set PATH to include virtual environment
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Expose port
 EXPOSE ${FLASK_PORT:-5001}
