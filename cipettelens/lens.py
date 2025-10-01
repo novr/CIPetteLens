@@ -4,7 +4,6 @@ Lens module for running CIAnalyzer and processing results.
 
 import json
 import os
-import sqlite3
 import subprocess
 from pathlib import Path
 
@@ -12,6 +11,7 @@ import yaml
 from dotenv import load_dotenv
 
 from .config import Config
+from .database import Database
 from .logger import logger
 from .security import SecurityConfig
 
@@ -161,100 +161,17 @@ def _run_with_stdin(github_token: str, repos: list[str], cianalyzer_image: str) 
 
 def save_to_database(data):
     """Save CIAnalyzer results to SQLite database."""
-    db_path = Path("db/data.sqlite")
-    db_path.parent.mkdir(exist_ok=True)
-
-    # Set secure permissions on database directory
-    db_path.parent.chmod(0o700)
-
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        # Use Database class for all database operations
+        db = Database()
+        db.save_cianalyzer_data(data)
 
-        # Create table if it doesn't exist
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS metrics (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                repository TEXT NOT NULL,
-                metric_name TEXT NOT NULL,
-                value REAL NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """
-        )
+        logger.info(f"Database schema initialized and data saved at: {db.db_path}")
+        logger.info(f"Database file created with secure permissions: {db.db_path}")
 
-        # Insert metrics from the data
-        if "repositories" in data:
-            for repo, metrics in data["repositories"].items():
-                # Insert duration metrics
-                if "duration" in metrics:
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "duration_average", metrics["duration"]["average"]),
-                    )
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "duration_median", metrics["duration"]["median"]),
-                    )
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "duration_p95", metrics["duration"]["p95"]),
-                    )
-
-                # Insert success rate
-                if "success_rate" in metrics:
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "success_rate", metrics["success_rate"]),
-                    )
-
-                # Insert throughput metrics
-                if "throughput" in metrics:
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "throughput_daily", metrics["throughput"]["daily"]),
-                    )
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "throughput_weekly", metrics["throughput"]["weekly"]),
-                    )
-
-                # Insert MTTR
-                if "mttr" in metrics:
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "mttr", metrics["mttr"]),
-                    )
-
-                # Insert build metrics
-                if "builds" in metrics:
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "builds_total", metrics["builds"]["total"]),
-                    )
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "builds_successful", metrics["builds"]["successful"]),
-                    )
-                    cursor.execute(
-                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
-                        (repo, "builds_failed", metrics["builds"]["failed"]),
-                    )
-
-        conn.commit()
-        logger.info(f"Database schema initialized and data saved at: {db_path}")
-
-    except sqlite3.Error as e:
-        logger.error(f"Database error: {e}")
+    except Exception as e:
+        logger.error(f"Error saving to database: {e}")
         raise
-    finally:
-        if "conn" in locals():
-            conn.close()
-
-    # Set secure permissions on database file
-    db_path.chmod(0o600)
-    logger.info(f"Database file created with secure permissions: {db_path}")
 
 
 def main():

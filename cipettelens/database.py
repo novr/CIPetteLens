@@ -125,3 +125,72 @@ class Database:
             )
 
             return [dict(row) for row in cursor.fetchall()]
+
+    def save_cianalyzer_data(self, data: dict[str, Any]) -> None:
+        """Save CIAnalyzer results to the database."""
+        if "repositories" not in data:
+            return
+
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            for repo, metrics in data["repositories"].items():
+                # Insert duration metrics
+                if "duration" in metrics:
+                    self._insert_metric_batch(
+                        cursor,
+                        repo,
+                        [
+                            ("duration_average", metrics["duration"]["average"]),
+                            ("duration_median", metrics["duration"]["median"]),
+                            ("duration_p95", metrics["duration"]["p95"]),
+                        ],
+                    )
+
+                # Insert success rate
+                if "success_rate" in metrics:
+                    self._insert_metric_batch(
+                        cursor, repo, [("success_rate", metrics["success_rate"])]
+                    )
+
+                # Insert throughput metrics
+                if "throughput" in metrics:
+                    self._insert_metric_batch(
+                        cursor,
+                        repo,
+                        [
+                            ("throughput_daily", metrics["throughput"]["daily"]),
+                            ("throughput_weekly", metrics["throughput"]["weekly"]),
+                        ],
+                    )
+
+                # Insert MTTR
+                if "mttr" in metrics:
+                    self._insert_metric_batch(cursor, repo, [("mttr", metrics["mttr"])])
+
+                # Insert build metrics
+                if "builds" in metrics:
+                    self._insert_metric_batch(
+                        cursor,
+                        repo,
+                        [
+                            ("builds_total", metrics["builds"]["total"]),
+                            ("builds_successful", metrics["builds"]["successful"]),
+                            ("builds_failed", metrics["builds"]["failed"]),
+                        ],
+                    )
+
+            conn.commit()
+
+    def _insert_metric_batch(
+        self, cursor: sqlite3.Cursor, repository: str, metrics: list[tuple[str, float]]
+    ) -> None:
+        """Insert a batch of metrics for a repository."""
+        for metric_name, value in metrics:
+            cursor.execute(
+                """
+                INSERT INTO metrics (repository, metric_name, value)
+                VALUES (?, ?, ?)
+            """,
+                (repository, metric_name, value),
+            )
