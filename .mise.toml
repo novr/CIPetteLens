@@ -2,11 +2,6 @@
 python = "3.11"
 uv = "latest"
 
-[env]
-LOG_LEVEL = "INFO"
-FLASK_DEBUG = "False"
-FLASK_PORT = "5001"
-
 # =============================================================================
 # Development & Setup
 # =============================================================================
@@ -74,7 +69,7 @@ run = "uv run collect"
 
 [tasks.health]
 description = "Check application health"
-run = "curl -f http://localhost:${FLASK_PORT:-5001}/ || echo 'Application not running'"
+run = "curl -f http://localhost:5001/ || echo 'Application not running'"
 
 # =============================================================================
 # Code Quality & Testing
