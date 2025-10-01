@@ -1,0 +1,207 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  PYTHON_VERSION: '3.11'
+  UV_VERSION: '0.8.22'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: ${{ env.UV_VERSION }}
+        
+    - name: Install dependencies
+      run: uv sync --extra dev
+      
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Extract version from tag or input
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${{ github.ref_name }}"
+        fi
+        
+        # Generate changelog from git commits
+        echo "## Changes in $VERSION" > CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        git log --pretty=format:"- %s (%h)" --no-merges $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "## Installation" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "### Using uv:" >> CHANGELOG.md
+        echo "\`\`\`bash" >> CHANGELOG.md
+        echo "uv add cipettelens" >> CHANGELOG.md
+        echo "\`\`\`" >> CHANGELOG.md
+        echo "" >> CHANGELOG.md
+        echo "### Using pip:" >> CHANGELOG.md
+        echo "\`\`\`bash" >> CHANGELOG.md
+        echo "pip install cipettelens" >> CHANGELOG.md
+        echo "\`\`\`" >> CHANGELOG.md
+        
+        # Set version for other steps
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.changelog.outputs.version }}
+        release_name: Release ${{ steps.changelog.outputs.version }}
+        body_path: CHANGELOG.md
+        draft: false
+        prerelease: ${{ contains(steps.changelog.outputs.version, 'alpha') || contains(steps.changelog.outputs.version, 'beta') || contains(steps.changelog.outputs.version, 'rc') }}
+
+  build-packages:
+    name: Build Python Packages
+    runs-on: ubuntu-latest
+    needs: create-release
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: ${{ env.UV_VERSION }}
+        
+    - name: Install build dependencies
+      run: |
+        uv sync --extra dev
+        uv add build twine
+        
+    - name: Build package
+      run: uv run python -m build
+      
+    - name: Upload Python package
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-package-py${{ matrix.python-version }}
+        path: dist/*
+
+  build-docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: create-release
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: cipettelens
+        tags: |
+          type=ref,event=tag
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=raw,value={{version}},enable={{is_default_branch}}
+          
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  upload-assets:
+    name: Upload Release Assets
+    runs-on: ubuntu-latest
+    needs: [create-release, build-packages, build-docker]
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Upload Python packages to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./python-package-py3.11/cipettelens-*.whl
+        asset_name: cipettelens-py3.11.whl
+        asset_content_type: application/zip
+        
+    - name: Upload Python packages to release (py3.12)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./python-package-py3.12/cipettelens-*.whl
+        asset_name: cipettelens-py3.12.whl
+        asset_content_type: application/zip
+
+  notify:
+    name: Notify Release
+    runs-on: ubuntu-latest
+    needs: [create-release, build-packages, build-docker, upload-assets]
+    if: always()
+    
+    steps:
+    - name: Notify on success
+      if: ${{ needs.create-release.result == 'success' && needs.build-packages.result == 'success' && needs.build-docker.result == 'success' }}
+      run: |
+        echo "✅ Release created successfully!"
+        echo "Docker image: cipettelens:latest"
+        echo "Python packages uploaded to GitHub release"
+        
+    - name: Notify on failure
+      if: ${{ needs.create-release.result == 'failure' || needs.build-packages.result == 'failure' || needs.build-docker.result == 'failure' }}
+      run: |
+        echo "❌ Release failed. Please check the logs."
+        exit 1

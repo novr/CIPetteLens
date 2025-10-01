@@ -1,0 +1,60 @@
+version: 2
+updates:
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "n_komiya"
+    assignees:
+      - "n_komiya"
+
+  # Enable version updates for Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "n_komiya"
+    assignees:
+      - "n_komiya"
+    groups:
+      # Group development dependencies
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "ruff*"
+          - "black*"
+          - "isort*"
+          - "bandit*"
+          - "safety*"
+          - "semgrep*"
+          - "pip-audit*"
+      # Group security tools
+      security-tools:
+        patterns:
+          - "cryptography*"
+          - "bandit*"
+          - "safety*"
+          - "semgrep*"
+          - "pip-audit*"
+
+  # Enable version updates for Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "n_komiya"
+    assignees:
+      - "n_komiya"
