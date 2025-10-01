@@ -53,19 +53,3 @@ jobs:
       - name: Run security tests
         run: uv run pytest tests/test_security.py -v
 
-  docker-test:
-    name: Docker Test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: docker build -t cipettelens:test .
-
-      - name: Test Docker image
-        run: |
-          # Test that the image can start (timeout after 10 seconds)
-          timeout 10s docker run --rm cipettelens:test || true

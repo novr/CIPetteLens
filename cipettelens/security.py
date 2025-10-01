@@ -73,6 +73,10 @@ class SecurityConfig:
     @classmethod
     def create_secure_temp_file(cls, content: str, suffix: str = ".tmp") -> str:
         """Create a secure temporary file with restricted permissions."""
+        # Handle None content
+        if content is None:
+            content = ""
+
         # Create temporary file with restricted permissions
         fd, path = tempfile.mkstemp(suffix=suffix)
 
@@ -84,7 +88,10 @@ class SecurityConfig:
             return path
         except Exception:
             # If writing fails, clean up the file descriptor
-            os.close(fd)
+            try:
+                os.close(fd)
+            except OSError:
+                pass
             try:
                 os.unlink(path)
             except OSError:
