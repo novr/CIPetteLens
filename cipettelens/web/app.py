@@ -63,4 +63,7 @@ def main():
     print(f"Debug mode: {debug}")
     print(f"Access the dashboard at: http://localhost:{port}")
 
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    # Use localhost for security in production
+    # S104: 0.0.0.0 is only used in debug mode for development
+    host = "127.0.0.1" if not debug else "0.0.0.0"
+    app.run(host=host, port=port, debug=debug)

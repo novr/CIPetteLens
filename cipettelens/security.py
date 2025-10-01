@@ -113,6 +113,7 @@ class SecurityConfig:
 
         # Validate GitHub token
         if not config.GITHUB_TOKEN:
+            # S105: This is an error message, not a hardcoded password
             errors["GITHUB_TOKEN"] = "GITHUB_TOKEN environment variable is required"
 
         # Validate target repositories

@@ -20,7 +20,8 @@ class SQLiteMetricsRepository(MetricsRepository):
             raise ValueError("DATABASE_PATH is not configured")
         # At this point, we know at least one of them is not None
         actual_path = db_path or config.DATABASE_PATH
-        assert actual_path is not None  # Type assertion for mypy
+        if actual_path is None:
+            raise ValueError("DATABASE_PATH is not configured")
         self.db_path = Path(actual_path)
         self.db_path.parent.mkdir(exist_ok=True)
         self._init_database()

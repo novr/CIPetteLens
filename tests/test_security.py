@@ -130,7 +130,7 @@ class TestSecurityConfig:
     @patch.dict(
         os.environ,
         {
-            "GITHUB_TOKEN": "ghp_1234567890abcdef1234567890abcdef12345678",
+            "GITHUB_TOKEN": "test_token_12345",
             "TARGET_REPOSITORIES": "owner/repo1,owner/repo2",
             "FLASK_PORT": "5000",
         },
@@ -139,7 +139,7 @@ class TestSecurityConfig:
     def test_validate_environment_valid(self, mock_config):
         """Test environment validation with valid values."""
         # Mock config values
-        mock_config.GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef12345678"
+        mock_config.GITHUB_TOKEN = "test_token_12345"
         mock_config.TARGET_REPOSITORIES = ["owner/repo1", "owner/repo2"]
         mock_config.FLASK_PORT = 5000
 
@@ -171,7 +171,7 @@ class TestSecurityConfig:
     def test_validate_environment_any_token(self, mock_config):
         """Test environment validation with any token format (validation disabled)."""
         # Mock config values
-        mock_config.GITHUB_TOKEN = "any_token_format"
+        mock_config.GITHUB_TOKEN = "test_token_any_format"
         mock_config.TARGET_REPOSITORIES = ["owner/repo1", "owner/repo2"]
         mock_config.FLASK_PORT = 5000
 
@@ -191,7 +191,7 @@ class TestSecurityConfig:
     def test_validate_environment_invalid_repos(self, mock_config):
         """Test environment validation with invalid repositories."""
         # Mock config values
-        mock_config.GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef12345678"
+        mock_config.GITHUB_TOKEN = "test_token_invalid_repos"
         mock_config.TARGET_REPOSITORIES = ["invalid-repo", "owner/repo2"]
         mock_config.FLASK_PORT = 5000
 
@@ -211,7 +211,7 @@ class TestSecurityConfig:
     def test_validate_environment_invalid_port(self, mock_config):
         """Test environment validation with invalid port."""
         # Mock config values
-        mock_config.GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef12345678"
+        mock_config.GITHUB_TOKEN = "test_token_invalid_repos"
         mock_config.TARGET_REPOSITORIES = ["owner/repo1", "owner/repo2"]
         mock_config.FLASK_PORT = 99999
 
