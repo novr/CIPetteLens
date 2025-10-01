@@ -15,13 +15,16 @@ RUN apt-get update && apt-get install -y \
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:$PATH"
+ENV PATH="/root/.local/bin:$PATH"
 
 # Set work directory
 WORKDIR /app
 
 # Copy dependency files
-COPY pyproject.toml ./
+COPY pyproject.toml uv.lock README.md ./
+
+# Copy application code
+COPY cipettelens/ ./cipettelens/
 
 # Install dependencies
 RUN uv sync --frozen
@@ -71,4 +74,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5000/ || exit 1
 
 # Default command
-CMD ["uv", "run", "web"]
+CMD ["python", "-m", "cipettelens.app"]

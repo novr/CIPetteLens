@@ -10,6 +10,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from .config import Config
 from .logger import logger
 from .security import SecurityConfig
 
@@ -28,8 +29,9 @@ def run_cianalyzer():
         logger.error(error_msg)
         raise ValueError(error_msg)
 
-    github_token = os.getenv("GITHUB_TOKEN")
-    target_repos = os.getenv("TARGET_REPOSITORIES", "")
+    github_token = Config.GITHUB_TOKEN
+    target_repos = ",".join(Config.TARGET_REPOSITORIES)
+    cianalyzer_image = Config.CIAnalyzer_IMAGE
 
     # Convert comma-separated repos to list
     repos = [repo.strip() for repo in target_repos.split(",")]
@@ -49,7 +51,7 @@ def run_cianalyzer():
             f"{token_file_path}:/tmp/github_token:ro",
             "-e",
             "GITHUB_TOKEN_FILE=/tmp/github_token",
-            "kesin11/cianalyzer:latest",
+            cianalyzer_image,
             "--repositories",
             ",".join(repos),
             "--output",

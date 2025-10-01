@@ -15,7 +15,7 @@ class Config:
 
     # GitHub configuration
     GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-    TARGET_REPOSITORIES = os.getenv("TARGET_REPOSITORIES", "").split(",")
+    TARGET_REPOSITORIES = [repo.strip() for repo in os.getenv("TARGET_REPOSITORIES", "").split(",") if repo.strip()]
 
     # Flask configuration
     FLASK_DEBUG = os.getenv("FLASK_DEBUG", "False").lower() == "true"

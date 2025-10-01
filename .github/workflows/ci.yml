@@ -67,4 +67,5 @@ jobs:
 
       - name: Test Docker image
         run: |
-          docker run --rm cipettelens:test --help || true
+          # Test that the image can start (timeout after 10 seconds)
+          timeout 10s docker run --rm cipettelens:test || true
