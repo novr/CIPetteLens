@@ -135,14 +135,26 @@ class TestSecurityConfig:
             "FLASK_PORT": "5000",
         },
     )
-    def test_validate_environment_valid(self):
+    @patch("cipettelens.security.config")
+    def test_validate_environment_valid(self, mock_config):
         """Test environment validation with valid values."""
+        # Mock config values
+        mock_config.GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef12345678"
+        mock_config.TARGET_REPOSITORIES = ["owner/repo1", "owner/repo2"]
+        mock_config.FLASK_PORT = 5000
+        
         errors = SecurityConfig.validate_environment()
         assert errors == {}
 
     @patch.dict(os.environ, {}, clear=True)
-    def test_validate_environment_missing_token(self):
+    @patch("cipettelens.security.config")
+    def test_validate_environment_missing_token(self, mock_config):
         """Test environment validation with missing token."""
+        # Mock config values
+        mock_config.GITHUB_TOKEN = None
+        mock_config.TARGET_REPOSITORIES = []
+        mock_config.FLASK_PORT = 5000
+        
         errors = SecurityConfig.validate_environment()
         assert "GITHUB_TOKEN" in errors
         assert "required" in errors["GITHUB_TOKEN"]
@@ -155,8 +167,14 @@ class TestSecurityConfig:
             "FLASK_PORT": "5000",
         },
     )
-    def test_validate_environment_any_token(self):
+    @patch("cipettelens.security.config")
+    def test_validate_environment_any_token(self, mock_config):
         """Test environment validation with any token format (validation disabled)."""
+        # Mock config values
+        mock_config.GITHUB_TOKEN = "any_token_format"
+        mock_config.TARGET_REPOSITORIES = ["owner/repo1", "owner/repo2"]
+        mock_config.FLASK_PORT = 5000
+        
         errors = SecurityConfig.validate_environment()
         # Should not have any errors since token validation is disabled
         assert "GITHUB_TOKEN" not in errors
@@ -169,8 +187,14 @@ class TestSecurityConfig:
             "FLASK_PORT": "5000",
         },
     )
-    def test_validate_environment_invalid_repos(self):
+    @patch("cipettelens.security.config")
+    def test_validate_environment_invalid_repos(self, mock_config):
         """Test environment validation with invalid repositories."""
+        # Mock config values
+        mock_config.GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef12345678"
+        mock_config.TARGET_REPOSITORIES = ["invalid-repo", "owner/repo2"]
+        mock_config.FLASK_PORT = 5000
+        
         errors = SecurityConfig.validate_environment()
         assert "TARGET_REPOSITORIES" in errors
         assert "Invalid repository format" in errors["TARGET_REPOSITORIES"]
@@ -183,8 +207,14 @@ class TestSecurityConfig:
             "FLASK_PORT": "99999",
         },
     )
-    def test_validate_environment_invalid_port(self):
+    @patch("cipettelens.security.config")
+    def test_validate_environment_invalid_port(self, mock_config):
         """Test environment validation with invalid port."""
+        # Mock config values
+        mock_config.GITHUB_TOKEN = "ghp_1234567890abcdef1234567890abcdef12345678"
+        mock_config.TARGET_REPOSITORIES = ["owner/repo1", "owner/repo2"]
+        mock_config.FLASK_PORT = 99999
+        
         errors = SecurityConfig.validate_environment()
         assert "FLASK_PORT" in errors
         assert "Invalid port number" in errors["FLASK_PORT"]
