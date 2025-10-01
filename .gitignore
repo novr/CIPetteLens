@@ -61,3 +61,11 @@ instance/
 build/
 dist/
 *.egg-info/
+
+# Testing and Coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.tox/
