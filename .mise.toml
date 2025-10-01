@@ -1,0 +1,135 @@
+[tools]
+python = "3.11"
+uv = "latest"
+docker = "latest"
+
+[env]
+LOG_LEVEL = "INFO"
+FLASK_DEBUG = "False"
+FLASK_PORT = "5000"
+
+[tasks.build]
+description = "Build Docker image"
+run = "docker build -t cipettelens:latest ."
+
+[tasks.run]
+description = "Run production container"
+run = "docker-compose up -d"
+
+[tasks.dev]
+description = "Run development container"
+run = "docker-compose -f docker-compose.dev.yml up"
+
+[tasks.stop]
+description = "Stop all containers"
+run = "docker-compose down && docker-compose -f docker-compose.dev.yml down"
+
+[tasks.test]
+description = "Run all tests"
+run = "uv run pytest"
+
+[tasks.test-security]
+description = "Run security tests"
+run = "uv run pytest tests/test_security.py -v"
+
+[tasks.test-coverage]
+description = "Run tests with coverage"
+run = "uv run pytest --cov=cipettelens --cov-report=html --cov-report=term"
+
+[tasks.lint]
+description = "Run linting"
+run = "uv run ruff check"
+
+[tasks.lint-fix]
+description = "Fix linting issues"
+run = "uv run ruff check --fix"
+
+[tasks.format]
+description = "Format code"
+run = "uv run black ."
+
+[tasks.format-check]
+description = "Check code formatting"
+run = "uv run black --check ."
+
+[tasks.type-check]
+description = "Run type checking"
+run = "uv run mypy cipettelens/"
+
+[tasks.install]
+description = "Install dependencies"
+run = "uv sync"
+
+[tasks.install-dev]
+description = "Install development dependencies"
+run = "uv sync --extra dev"
+
+[tasks.collect]
+description = "Collect data using CIAnalyzer"
+run = "uv run collect"
+
+[tasks.web]
+description = "Start web server"
+run = "uv run web"
+
+[tasks.clean]
+description = "Clean up containers and images"
+run = "docker-compose down && docker-compose -f docker-compose.dev.yml down && docker rmi cipettelens:latest 2>/dev/null || true && docker system prune -f"
+
+[tasks.logs]
+description = "Show container logs"
+run = "docker-compose logs -f"
+
+[tasks.shell]
+description = "Open shell in container"
+run = "docker run --rm -it -v $(pwd):/app -w /app cipettelens:latest /bin/bash"
+
+[tasks.security-scan]
+description = "Run security scan"
+run = "uv run ruff check --select S"
+
+[tasks.audit]
+description = "Audit dependencies for security issues"
+run = "uv tree --format=json | jq '.packages[] | select(.vulnerabilities)'"
+
+[tasks.db-init]
+description = "Initialize database"
+run = "uv run python -c 'from cipettelens.database import Database; db = Database(); print(\"Database initialized\")'"
+
+[tasks.db-reset]
+description = "Reset database"
+run = "rm -f db/data.sqlite && uv run python -c 'from cipettelens.database import Database; db = Database(); print(\"Database reset\")'"
+
+[tasks.setup]
+description = "Complete project setup"
+run = [
+    "cp env.example .env",
+    "uv sync --extra dev",
+    "mkdir -p logs db",
+    "echo 'Setup complete! Edit .env file with your configuration.'"
+]
+
+[tasks.ci]
+description = "Run CI pipeline"
+run = [
+    "uv run ruff check",
+    "uv run black --check .",
+    "uv run pytest --cov=cipettelens --cov-report=xml",
+    "uv run ruff check --select S"
+]
+
+[tasks.pre-commit]
+description = "Run pre-commit checks"
+run = [
+    "uv run ruff check --fix",
+    "uv run black .",
+    "uv run pytest"
+]
+
+[tasks.docs]
+description = "Generate documentation"
+run = "uv run python -c 'import cipettelens; help(cipettelens)' > docs/api.md"
+
+[tasks.health]
+description = "Check application health"
+run = "curl -f http://localhost:5000/ || echo 'Application not running'"

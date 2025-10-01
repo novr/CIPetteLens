@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIPetteLens Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 CIPetteLens</h1>
+            <p>CI/CD Metrics Dashboard</p>
+        </header>
+        
+        <main>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>Duration</h3>
+                    <div class="metric-value">--</div>
+                    <div class="metric-trend">--</div>
+                </div>
+                
+                <div class="metric-card">
+                    <h3>Success Rate</h3>
+                    <div class="metric-value">--</div>
+                    <div class="metric-trend">--</div>
+                </div>
+                
+                <div class="metric-card">
+                    <h3>Throughput</h3>
+                    <div class="metric-value">--</div>
+                    <div class="metric-trend">--</div>
+                </div>
+                
+                <div class="metric-card">
+                    <h3>MTTR</h3>
+                    <div class="metric-value">--</div>
+                    <div class="metric-trend">--</div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h2>About CIPetteLens</h2>
+                <p>This dashboard visualizes CI/CD metrics collected by the CIAnalyzer engine.</p>
+                <p>To start collecting data, run: <code>uv run collect</code></p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
