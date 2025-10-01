@@ -72,6 +72,8 @@ ignore = [
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
     "S105",  # hardcoded password (false positive for error messages)
+    "S603",  # subprocess call (validated and controlled)
+    "S104",  # binding to all interfaces (only in debug mode)
 ]
 
 [tool.ruff.lint.per-file-ignores]
