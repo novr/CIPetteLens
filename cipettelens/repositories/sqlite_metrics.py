@@ -16,6 +16,8 @@ class SQLiteMetricsRepository(MetricsRepository):
 
     def __init__(self, db_path: str | None = None):
         """Initialize SQLite metrics repository."""
+        if db_path is None and config.DATABASE_PATH is None:
+            raise ValueError("DATABASE_PATH is not configured")
         self.db_path = Path(db_path or config.DATABASE_PATH)
         self.db_path.parent.mkdir(exist_ok=True)
         self._init_database()

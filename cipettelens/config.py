@@ -88,6 +88,8 @@ class Config:
 
     def get_database_path(self) -> Path:
         """Get database path as Path object."""
+        if self.DATABASE_PATH is None:
+            raise ValueError("DATABASE_PATH is not configured")
         return Path(self.DATABASE_PATH)
 
     def get_repositories_from_config(self) -> list[str]:

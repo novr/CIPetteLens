@@ -32,6 +32,8 @@ class MetricsService:
         logger.info(f"Collecting metrics for {len(repositories)} repositories")
 
         # Collect metrics
+        if config.GITHUB_TOKEN is None:
+            raise ConfigurationError("GITHUB_TOKEN is not configured", "GITHUB_TOKEN")
         metrics = self.ci_analyzer_client.collect_metrics(
             repositories, config.GITHUB_TOKEN
         )

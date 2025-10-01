@@ -107,4 +107,4 @@ class SecureLogger:
 
 
 # Global logger instance
-logger = SecureLogger("cipettelens", config.LOG_LEVEL)
+logger = SecureLogger("cipettelens", config.LOG_LEVEL or "INFO")

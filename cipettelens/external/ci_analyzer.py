@@ -66,6 +66,8 @@ class CIAnalyzerClient:
         if self.debug:
             cmd.extend(["-e", "CI_ANALYZER_DEBUG=1"])
 
+        if self.image is None:
+            raise ValueError("CIAnalyzer image is not configured")
         cmd.extend([self.image, "-c", "ci_analyzer.yaml"])
 
         # Add --debug flag if debug mode is enabled

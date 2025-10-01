@@ -83,7 +83,7 @@ class RepositoryMetrics:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
-        result = {
+        result: dict[str, Any] = {
             "repository": self.repository,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
         }
