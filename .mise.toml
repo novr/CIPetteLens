@@ -1,7 +1,6 @@
 [tools]
 python = "3.11"
 uv = "latest"
-docker = "latest"
 
 [env]
 LOG_LEVEL = "INFO"
