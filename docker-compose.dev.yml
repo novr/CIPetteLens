@@ -1,10 +1,6 @@
-version: "3.8"
-
 services:
   cipettelens-dev:
-    build:
-      context: .
-      target: builder # Use builder stage for development
+    build: .
     ports:
       - "${FLASK_PORT:-5001}:${FLASK_PORT:-5001}"
       - "5678:5678" # For debugger
