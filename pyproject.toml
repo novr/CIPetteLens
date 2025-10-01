@@ -54,6 +54,7 @@ dev = [
     "black>=23.0.0",          # Code formatter
     "isort>=5.12.0",          # Import sorter
     "mypy>=1.5.0",            # Type checker
+    "types-PyYAML>=6.0.0",    # PyYAML type stubs
 ]
 
 # All development tools
@@ -107,6 +108,7 @@ ignore = [
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
     "T201",  # print statements (allowed in CLI tools)
+    "N818",  # exception name should end with Error (we use Exception for consistency)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -121,16 +123,7 @@ known-first-party = ["cipettelens"]
 target-version = ["py311"]
 line-length = 88
 include = '\.pyi?$'
-extend-exclude = [
-    "__pycache__",
-    ".git",
-    ".venv",
-    "venv",
-    "_build",
-    "build",
-    "dist",
-    "*.egg-info",
-]
+extend-exclude = "/__pycache__|\\.git|\\.venv|venv|_build|build|dist|\\.*\\.egg-info"
 
 [tool.isort]
 profile = "black"
@@ -166,4 +159,9 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+]
+
+[dependency-groups]
+dev = [
+    "types-pyyaml>=6.0.12.20250915",
 ]

@@ -3,13 +3,13 @@ python = "3.11"
 uv = "latest"
 
 # =============================================================================
-# Development & Setup
+# Setup & Installation
 # =============================================================================
 
 [tasks.setup]
-description = "Complete project setup"
+description = "Complete project setup (creates .env if not exists)"
 run = [
-    "cp env.example .env",
+    "test -f .env || cp env.example .env",
     "uv sync --extra dev",
     "mkdir -p logs db",
     "echo 'Setup complete! Edit .env file with your configuration.'"
@@ -24,90 +24,91 @@ description = "Install development dependencies"
 run = "uv sync --extra dev"
 
 # =============================================================================
-# Application & Data
+# Application
 # =============================================================================
-
-[tasks.dev]
-description = "Run development server"
-run = "uv run web"
 
 [tasks.web]
 description = "Start web server"
 run = "uv run web"
 
 [tasks.collect]
-description = "Collect data using CIAnalyzer"
+description = "Collect CI metrics using CIAnalyzer"
 run = "uv run collect"
 
 [tasks.health]
-description = "Check application health"
+description = "Check if application is running"
 run = "curl -f http://localhost:5001/ || echo 'Application not running'"
 
+# =============================================================================
+# Development
+# =============================================================================
 
+[tasks.dev]
+description = "Start development server (same as web)"
+run = "uv run web"
 
 # =============================================================================
-# Code Quality & Testing
+# Code Quality
+# =============================================================================
+
+[tasks.lint]
+description = "Check code with linter"
+run = "uv run ruff check"
+
+[tasks.lint-fix]
+description = "Fix linting issues automatically"
+run = "uv run ruff check --fix"
+
+[tasks.format]
+description = "Format code with black"
+run = "uv run black ."
+
+[tasks.format-check]
+description = "Check if code is properly formatted"
+run = "uv run black --check ."
+
+[tasks.type-check]
+description = "Run type checking with mypy"
+run = "uv run mypy cipettelens/"
+
+[tasks.check-all]
+description = "Run all code quality checks"
+run = [
+    "uv run ruff check",
+    "uv run black --check .",
+    "uv run mypy cipettelens/"
+]
+
+# =============================================================================
+# Testing
 # =============================================================================
 
 [tasks.test]
 description = "Run all tests"
 run = "uv run pytest"
 
-[tasks.test-coverage]
-description = "Run tests with coverage"
-run = "uv run pytest --cov=cipettelens --cov-report=html --cov-report=term"
+[tasks.test-verbose]
+description = "Run tests with verbose output"
+run = "uv run pytest -v"
 
-[tasks.lint]
-description = "Run linting"
-run = "uv run ruff check"
-
-[tasks.lint-fix]
-description = "Fix linting issues"
-run = "uv run ruff check --fix"
-
-[tasks.format]
-description = "Format code"
-run = "uv run black ."
-
-[tasks.format-check]
-description = "Check code formatting"
-run = "uv run black --check ."
-
-[tasks.type-check]
-description = "Run type checking"
-run = "uv run mypy cipettelens/"
+[tasks.test-watch]
+description = "Run tests in watch mode"
+run = "uv run pytest --watch"
 
 # =============================================================================
-# Security & Auditing
-# =============================================================================
-
-[tasks.security-scan]
-description = "Run security scan"
-run = "uv run ruff check --select S"
-
-[tasks.test-security]
-description = "Run security tests"
-run = "uv run pytest tests/test_security.py -v"
-
-[tasks.audit]
-description = "Audit dependencies for security issues"
-run = "uv tree --format=json | jq '.packages[] | select(.vulnerabilities)'"
-
-# =============================================================================
-# CI/CD & Workflow
+# CI/CD
 # =============================================================================
 
 [tasks.ci]
-description = "Run CI pipeline"
+description = "Run CI pipeline (lint + format + test)"
 run = [
-    "uv run ruff check --ignore S603,S104,S105",
+    "uv run ruff check",
     "uv run black --check .",
-    "uv run pytest --cov=cipettelens --cov-report=xml",
-    "uv run ruff check --select S --ignore S603,S104,S105"
+    "uv run pytest"
 ]
 
 [tasks.pre-commit]
-description = "Run pre-commit checks"
+description = "Run pre-commit checks (fix + format + test)"
 run = [
     "uv run ruff check --fix",
     "uv run black .",
@@ -115,21 +116,29 @@ run = [
 ]
 
 # =============================================================================
-# Database Management
+# Database
 # =============================================================================
-
-[tasks.db-init]
-description = "Initialize database"
-run = "uv run python -c 'from cipettelens.lens import save_to_database; save_to_database({}); print(\"Database initialized\")'"
 
 [tasks.db-reset]
-description = "Reset database"
-run = "rm -f db/data.sqlite && uv run python -c 'from cipettelens.lens import save_to_database; save_to_database({}); print(\"Database reset\")'"
+description = "Reset database (remove existing data)"
+run = "rm -f db/data.sqlite && echo 'Database reset complete'"
 
 # =============================================================================
-# Documentation
+# Utilities
 # =============================================================================
 
-[tasks.docs]
-description = "Generate documentation"
-run = "uv run python -c 'import cipettelens; help(cipettelens)' > docs/api.md"
+[tasks.clean]
+description = "Clean up temporary files and caches"
+run = [
+    "rm -rf __pycache__",
+    "rm -rf .pytest_cache",
+    "rm -rf .mypy_cache",
+    "rm -rf htmlcov",
+    "rm -f .coverage",
+    "rm -f coverage.xml",
+    "echo 'Cleanup complete'"
+]
+
+[tasks.help]
+description = "Show available tasks"
+run = "mise tasks"

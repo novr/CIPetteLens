@@ -5,6 +5,7 @@ CIAnalyzer external service client.
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from ..config import config
 from ..exceptions.ci_analyzer import CIAnalyzerExecutionError
@@ -73,7 +74,7 @@ class CIAnalyzerClient:
         pattern = r"^[a-zA-Z0-9][a-zA-Z0-9_.-]*(/[a-zA-Z0-9][a-zA-Z0-9_.-]*)?(:[a-zA-Z0-9_.-]+)?$"
         return bool(re.match(pattern, image_name))
 
-    def _run_cianalyzer(self, github_token: str) -> dict:
+    def _run_cianalyzer(self, github_token: str) -> dict[Any, Any]:
         """Run CIAnalyzer via Docker."""
         cmd = [
             "docker",
@@ -117,7 +118,7 @@ class CIAnalyzerClient:
             )
 
             logger.info("CIAnalyzer execution completed successfully")
-            return json.loads(result.stdout)
+            return json.loads(result.stdout)  # type: ignore[no-any-return]
 
         except subprocess.TimeoutExpired as e:
             raise CIAnalyzerExecutionError(
