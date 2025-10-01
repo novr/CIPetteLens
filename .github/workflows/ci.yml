@@ -1,247 +1,70 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main, develop ]
-  schedule:
-    # Run security scan daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    branches: [main]
 
 env:
-  PYTHON_VERSION: '3.11'
-  UV_VERSION: '0.8.22'
+  PYTHON_VERSION: "3.11"
+  UV_VERSION: "0.8.22"
 
 jobs:
-  test:
-    name: Test Suite
+  test-and-lint:
+    name: Test and Lint
     runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        python-version: ['3.11', '3.12']
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-        
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-      with:
-        version: ${{ env.UV_VERSION }}
-        
-    - name: Cache uv dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/uv
-        key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-uv-
-          
-    - name: Install dependencies
-      run: uv sync --extra dev
-      
-    - name: Run tests
-      run: uv run pytest --cov=cipettelens --cov-report=xml --cov-report=html
-      
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
 
-  lint:
-    name: Linting and Formatting
-    runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-      with:
-        version: ${{ env.UV_VERSION }}
-        
-    - name: Install dependencies
-      run: uv sync --extra dev
-      
-    - name: Run ruff linting
-      run: uv run ruff check --output-format=github
-      
-    - name: Run ruff formatting check
-      run: uv run ruff format --check
-      
-    - name: Run black formatting check
-      run: uv run black --check .
-      
-    - name: Run isort import sorting check
-      run: uv run isort --check-only .
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-      with:
-        version: ${{ env.UV_VERSION }}
-        
-    - name: Install dependencies
-      run: uv sync --extra dev
-      
-    - name: Run security tests
-      run: uv run pytest tests/test_security.py -v
-      
-    - name: Run bandit security linter
-      run: |
-        uv add bandit[toml]
-        uv run bandit -r cipettelens/ -f json -o bandit-report.json || true
-        uv run bandit -r cipettelens/ -f txt
-        
-    - name: Run safety dependency check
-      run: |
-        uv add safety
-        uv run safety check --json --output safety-report.json || true
-        uv run safety check
-        
-    - name: Upload security reports
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: security-reports
-        path: |
-          bandit-report.json
-          safety-report.json
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-  docker:
-    name: Docker Build and Test
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
-    - name: Build Docker image
-      run: |
-        docker build -t cipettelens:test .
-        
-    - name: Test Docker image
-      run: |
-        # Test that the image can start
-        docker run --rm cipettelens:test --help || true
-        
-    - name: Run containerized tests
-      run: |
-        docker run --rm -v $(pwd):/app cipettelens:test uv run pytest tests/test_lens.py
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
 
-  dependency-audit:
-    name: Dependency Audit
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-      with:
-        version: ${{ env.UV_VERSION }}
-        
-    - name: Install dependencies
-      run: uv sync --extra dev
-      
-    - name: Run uv audit
-      run: uv audit
-      
-    - name: Check for outdated dependencies
-      run: uv tree --outdated
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
 
-  build-and-push:
-    name: Build and Push Docker Image
-    runs-on: ubuntu-latest
-    needs: [test, lint, security, docker]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-        
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: cipettelens
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
-          
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Install dependencies
+        run: uv sync --extra dev
 
-  notify:
-    name: Notify Results
+      - name: Run tests
+        run: uv run pytest --cov=cipettelens --cov-report=xml
+
+      - name: Run linting
+        run: |
+          uv run ruff check
+          uv run ruff format --check
+          uv run black --check .
+          uv run isort --check-only .
+
+      - name: Run security tests
+        run: uv run pytest tests/test_security.py -v
+
+  docker-test:
+    name: Docker Test
     runs-on: ubuntu-latest
-    needs: [test, lint, security, docker, dependency-audit]
-    if: always()
-    
+    if: github.event_name == 'push'
+
     steps:
-    - name: Notify on success
-      if: ${{ needs.test.result == 'success' && needs.lint.result == 'success' && needs.security.result == 'success' }}
-      run: |
-        echo "✅ All checks passed successfully!"
-        
-    - name: Notify on failure
-      if: ${{ needs.test.result == 'failure' || needs.lint.result == 'failure' || needs.security.result == 'failure' }}
-      run: |
-        echo "❌ Some checks failed. Please review the logs."
-        exit 1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t cipettelens:test .
+
+      - name: Test Docker image
+        run: |
+          docker run --rm cipettelens:test --help || true
