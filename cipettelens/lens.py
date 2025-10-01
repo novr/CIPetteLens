@@ -17,8 +17,48 @@ from .security import SecurityConfig
 load_dotenv()
 
 
+def generate_mock_data():
+    """Generate mock CI/CD metrics data for testing."""
+    import random
+    from datetime import datetime, timedelta
+    
+    target_repos = Config.TARGET_REPOSITORIES
+    mock_data = {
+        "timestamp": datetime.now().isoformat(),
+        "repositories": {}
+    }
+    
+    for repo in target_repos:
+        mock_data["repositories"][repo] = {
+            "duration": {
+                "average": round(random.uniform(5.0, 30.0), 2),
+                "median": round(random.uniform(4.0, 25.0), 2),
+                "p95": round(random.uniform(15.0, 45.0), 2)
+            },
+            "success_rate": round(random.uniform(0.85, 0.98), 3),
+            "throughput": {
+                "daily": random.randint(10, 50),
+                "weekly": random.randint(70, 350)
+            },
+            "mttr": round(random.uniform(2.0, 8.0), 2),
+            "builds": {
+                "total": random.randint(100, 500),
+                "successful": random.randint(85, 490),
+                "failed": random.randint(5, 50)
+            }
+        }
+    
+    logger.info("Generated mock CI/CD metrics data")
+    return mock_data
+
+
 def run_cianalyzer():
     """Run CIAnalyzer via Docker and return the JSON output."""
+    # Check if we should use mock data
+    if Config.CIAnalyzer_IMAGE == "hello-world" or not Config.CIAnalyzer_IMAGE:
+        logger.info("Using mock data for testing")
+        return generate_mock_data()
+    
     # Validate environment variables
     validation_errors = SecurityConfig.validate_environment()
     if validation_errors:
@@ -98,12 +138,66 @@ def save_to_database(data):
         """
         )
 
-        # Insert metrics (this is a simplified example)
-        # In a real implementation, you would parse the CIAnalyzer JSON output
-        # and extract specific metrics like duration, success rate, etc.
+        # Insert metrics from the data
+        if "repositories" in data:
+            for repo, metrics in data["repositories"].items():
+                # Insert duration metrics
+                if "duration" in metrics:
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "duration_average", metrics["duration"]["average"])
+                    )
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "duration_median", metrics["duration"]["median"])
+                    )
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "duration_p95", metrics["duration"]["p95"])
+                    )
+                
+                # Insert success rate
+                if "success_rate" in metrics:
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "success_rate", metrics["success_rate"])
+                    )
+                
+                # Insert throughput metrics
+                if "throughput" in metrics:
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "throughput_daily", metrics["throughput"]["daily"])
+                    )
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "throughput_weekly", metrics["throughput"]["weekly"])
+                    )
+                
+                # Insert MTTR
+                if "mttr" in metrics:
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "mttr", metrics["mttr"])
+                    )
+                
+                # Insert build metrics
+                if "builds" in metrics:
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "builds_total", metrics["builds"]["total"])
+                    )
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "builds_successful", metrics["builds"]["successful"])
+                    )
+                    cursor.execute(
+                        "INSERT INTO metrics (repository, metric_name, value) VALUES (?, ?, ?)",
+                        (repo, "builds_failed", metrics["builds"]["failed"])
+                    )
 
         conn.commit()
-        logger.info(f"Database schema initialized at: {db_path}")
+        logger.info(f"Database schema initialized and data saved at: {db_path}")
 
     except sqlite3.Error as e:
         logger.error(f"Database error: {e}")

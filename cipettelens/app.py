@@ -10,7 +10,7 @@ from flask import Flask, render_template
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__, template_folder='templates', static_folder='static')
+app = Flask(__name__, template_folder='/app/templates', static_folder='/app/static')
 
 # Configuration
 app.config["DEBUG"] = os.getenv("FLASK_DEBUG", "False").lower() == "true"
