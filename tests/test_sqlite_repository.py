@@ -53,7 +53,7 @@ class TestSQLiteMetricsRepository:
 
     def test_init_creates_database(self, temp_db_path):
         """Test that initialization creates the database file."""
-        repository = SQLiteMetricsRepository(db_path=temp_db_path)
+        SQLiteMetricsRepository(db_path=temp_db_path)
         assert Path(temp_db_path).exists()
 
     def test_save_metrics(self, repository, sample_metrics):
@@ -220,14 +220,18 @@ class TestSQLiteMetricsRepository:
     def test_database_error_handling(self, repository):
         """Test database error handling."""
         # Test with invalid database path
-        with pytest.raises(Exception):  # Should raise DatabaseException
+        with pytest.raises(OSError):  # Should raise OSError for invalid path
             invalid_repo = SQLiteMetricsRepository(db_path="/invalid/path/db.sqlite")
             invalid_repo.get_all_metrics()
 
     @patch("cipettelens.repositories.sqlite_metrics.sqlite3.connect")
     def test_database_connection_error(self, mock_connect, temp_db_path):
         """Test database connection error handling."""
+        from cipettelens.exceptions.database import DatabaseConnectionError
+
         mock_connect.side_effect = sqlite3.Error("Connection failed")
 
-        with pytest.raises(Exception):  # Should raise DatabaseConnectionError
+        with pytest.raises(
+            DatabaseConnectionError
+        ):  # Should raise DatabaseConnectionError
             SQLiteMetricsRepository(db_path=temp_db_path)

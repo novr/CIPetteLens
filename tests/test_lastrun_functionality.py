@@ -20,6 +20,7 @@ class TestLastRunFunctionality:
             original_cwd = Path.cwd()
             try:
                 import os
+
                 os.chdir(temp_dir)
 
                 client = CIAnalyzerClient()
@@ -38,6 +39,7 @@ class TestLastRunFunctionality:
             original_cwd = Path.cwd()
             try:
                 import os
+
                 os.chdir(temp_dir)
 
                 # Create the directory structure
@@ -64,6 +66,7 @@ class TestLastRunFunctionality:
             original_cwd = Path.cwd()
             try:
                 import os
+
                 os.chdir(temp_dir)
 
                 # Create the directory structure but no file
@@ -84,27 +87,28 @@ class TestLastRunFunctionality:
     def test_run_cianalyzer_creates_directories(self, mock_run):
         """Test that running CIAnalyzer creates required directories."""
         # Mock successful subprocess execution
-        mock_result = type('MockResult', (), {
-            'stdout': '{"repositories": {}}',
-            'stderr': '',
-            'returncode': 0
-        })()
+        mock_result = type(
+            "MockResult",
+            (),
+            {"stdout": '{"repositories": {}}', "stderr": "", "returncode": 0},
+        )()
         mock_run.return_value = mock_result
-        
+
         with tempfile.TemporaryDirectory() as temp_dir:
             original_cwd = Path.cwd()
             try:
                 import os
+
                 os.chdir(temp_dir)
-                
+
                 # Use a real image name to avoid mock data path
                 client = CIAnalyzerClient(image="kesin/ci_analyzer:latest")
                 client.collect_metrics(["test/repo"], "fake_token")
-                
+
                 # Check that directories were created
                 assert Path(".ci_analyzer").exists()
                 assert Path(".ci_analyzer/last_run").exists()
-                
+
             finally:
                 os.chdir(original_cwd)
 
@@ -114,6 +118,7 @@ class TestLastRunFunctionality:
             original_cwd = Path.cwd()
             try:
                 import os
+
                 os.chdir(temp_dir)
 
                 # Create directory structure
@@ -126,9 +131,9 @@ class TestLastRunFunctionality:
                     "repos": {
                         "test/repo": {
                             "last_analyzed": "2024-01-01T00:00:00Z",
-                            "workflow_runs": 10
+                            "workflow_runs": 10,
                         }
-                    }
+                    },
                 }
                 last_run_file.write_text(json.dumps(test_data, indent=2))
 
