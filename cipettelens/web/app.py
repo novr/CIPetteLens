@@ -7,8 +7,7 @@ from pathlib import Path
 from flask import Flask, jsonify, render_template, request
 
 from ..config import config
-from ..repositories.sqlite_metrics import SQLiteMetricsRepository
-from ..services.metrics_service import MetricsService
+from ..factories import create_metrics_repository, create_metrics_service
 
 
 def create_app() -> Flask:
@@ -27,9 +26,9 @@ def create_app() -> Flask:
     app.config["DEBUG"] = config.FLASK_DEBUG
     app.config["PORT"] = config.FLASK_PORT
 
-    # Initialize dependencies
-    metrics_repository = SQLiteMetricsRepository()
-    metrics_service = MetricsService(metrics_repository)
+    # Initialize dependencies using factories
+    metrics_repository = create_metrics_repository()
+    metrics_service = create_metrics_service()
 
     @app.route("/")
     def dashboard():

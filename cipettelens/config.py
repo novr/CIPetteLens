@@ -68,8 +68,8 @@ class Config:
 
         return [repo.strip() for repo in repos_str.split(",") if repo.strip()]
 
-    def validate(self) -> bool:
-        """Validate required configuration."""
+    def validate(self) -> list[str]:
+        """Validate required configuration and return list of errors."""
         errors = []
 
         if not self.GITHUB_TOKEN:
@@ -81,10 +81,17 @@ class Config:
         if self.FLASK_PORT < 1 or self.FLASK_PORT > 65535:
             errors.append("FLASK_PORT must be between 1 and 65535")
 
+        return errors
+
+    def is_valid(self) -> bool:
+        """Check if configuration is valid."""
+        return len(self.validate()) == 0
+
+    def validate_and_raise(self) -> None:
+        """Validate configuration and raise exception if invalid."""
+        errors = self.validate()
         if errors:
             raise ValueError("Configuration validation failed: " + "; ".join(errors))
-
-        return True
 
     def get_database_path(self) -> Path:
         """Get database path as Path object."""

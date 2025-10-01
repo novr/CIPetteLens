@@ -2,7 +2,6 @@
 Metrics service for CI/CD metrics management.
 """
 
-from ..config import config
 from ..exceptions.validation import ConfigurationError
 from ..external.ci_analyzer import CIAnalyzerClient
 from ..logger import logger
@@ -16,10 +15,14 @@ class MetricsService:
     def __init__(
         self,
         metrics_repository: MetricsRepository,
+        github_token: str,
+        target_repositories: list[str],
         ci_analyzer_client: CIAnalyzerClient | None = None,
     ):
         """Initialize metrics service."""
         self.metrics_repository = metrics_repository
+        self.github_token = github_token
+        self.target_repositories = target_repositories
         self.ci_analyzer_client = ci_analyzer_client or CIAnalyzerClient()
 
     def collect_and_save_metrics(self) -> CIMetrics:
@@ -27,15 +30,13 @@ class MetricsService:
         # Validate configuration
         self._validate_configuration()
 
-        # Get repositories
-        repositories = config.get_repositories_from_config()
-        logger.info(f"Collecting metrics for {len(repositories)} repositories")
+        logger.info(
+            f"Collecting metrics for {len(self.target_repositories)} repositories"
+        )
 
         # Collect metrics
-        if config.GITHUB_TOKEN is None:
-            raise ConfigurationError("GITHUB_TOKEN is not configured", "GITHUB_TOKEN")
         metrics = self.ci_analyzer_client.collect_metrics(
-            repositories, config.GITHUB_TOKEN
+            self.target_repositories, self.github_token
         )
 
         # Save metrics
@@ -58,11 +59,10 @@ class MetricsService:
 
     def _validate_configuration(self) -> None:
         """Validate service configuration."""
-        if not config.GITHUB_TOKEN:
+        if not self.github_token:
             raise ConfigurationError("GITHUB_TOKEN is required", "GITHUB_TOKEN")
 
-        repositories = config.get_repositories_from_config()
-        if not repositories:
+        if not self.target_repositories:
             raise ConfigurationError(
                 "No repositories configured", "TARGET_REPOSITORIES"
             )

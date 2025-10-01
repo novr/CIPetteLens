@@ -12,20 +12,16 @@ from cipettelens.cli.collect import collect_metrics
 class TestCollectCLI:
     """Test collect CLI functionality."""
 
-    @patch("cipettelens.cli.collect.SQLiteMetricsRepository")
-    @patch("cipettelens.cli.collect.MetricsService")
+    @patch("cipettelens.cli.collect.create_metrics_service")
     @patch("cipettelens.cli.collect.CollectMetricsUseCase")
     @patch("cipettelens.cli.collect.logger")
     def test_collect_metrics_success(
-        self, mock_logger, mock_use_case_class, mock_service_class, mock_repo_class
+        self, mock_logger, mock_use_case_class, mock_create_service
     ):
         """Test successful metrics collection."""
         # Setup mocks
-        mock_repo = MagicMock()
-        mock_repo_class.return_value = mock_repo
-
         mock_service = MagicMock()
-        mock_service_class.return_value = mock_service
+        mock_create_service.return_value = mock_service
 
         mock_use_case = MagicMock()
         mock_metrics = MagicMock()
@@ -37,8 +33,7 @@ class TestCollectCLI:
         collect_metrics()
 
         # Verify
-        mock_repo_class.assert_called_once()
-        mock_service_class.assert_called_once_with(mock_repo)
+        mock_create_service.assert_called_once()
         mock_use_case_class.assert_called_once_with(mock_service)
         mock_use_case.execute.assert_called_once()
         mock_logger.info.assert_called()
@@ -47,20 +42,16 @@ class TestCollectCLI:
             "Data collection completed successfully! Collected metrics for 2 repositories"
         )
 
-    @patch("cipettelens.cli.collect.SQLiteMetricsRepository")
-    @patch("cipettelens.cli.collect.MetricsService")
+    @patch("cipettelens.cli.collect.create_metrics_service")
     @patch("cipettelens.cli.collect.CollectMetricsUseCase")
     @patch("cipettelens.cli.collect.logger")
     def test_collect_metrics_error(
-        self, mock_logger, mock_use_case_class, mock_service_class, mock_repo_class
+        self, mock_logger, mock_use_case_class, mock_create_service
     ):
         """Test metrics collection with error."""
         # Setup mocks
-        mock_repo = MagicMock()
-        mock_repo_class.return_value = mock_repo
-
         mock_service = MagicMock()
-        mock_service_class.return_value = mock_service
+        mock_create_service.return_value = mock_service
 
         mock_use_case = MagicMock()
         mock_use_case.execute.side_effect = Exception("Test error")

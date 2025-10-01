@@ -2,9 +2,8 @@
 Collect metrics CLI command.
 """
 
+from ..factories import create_metrics_service
 from ..logger import logger
-from ..repositories.sqlite_metrics import SQLiteMetricsRepository
-from ..services.metrics_service import MetricsService
 from ..use_cases.collect_metrics import CollectMetricsUseCase
 
 
@@ -13,9 +12,8 @@ def collect_metrics() -> None:
     try:
         logger.info("Starting CIAnalyzer data collection...")
 
-        # Initialize dependencies
-        metrics_repository = SQLiteMetricsRepository()
-        metrics_service = MetricsService(metrics_repository)
+        # Initialize dependencies using factory
+        metrics_service = create_metrics_service()
         collect_use_case = CollectMetricsUseCase(metrics_service)
 
         # Execute use case
